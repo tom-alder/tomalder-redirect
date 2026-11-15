@@ -1,0 +1,339 @@
+@font-face { font-family: 'New Order'; src: local('New Order Semibold'), local('NewOrder-Semibold'); font-weight: 600; font-display: swap; }
+@font-face { font-family: 'Avenir Next'; src: local('Avenir Next Regular'), local('AvenirNext-Regular'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Avenir Next'; src: local('Avenir Next Medium'), local('AvenirNext-Medium'); font-weight: 500; font-display: swap; }
+@font-face { font-family: 'Avenir Next'; src: local('Avenir Next Demi Bold'), local('AvenirNext-DemiBold'); font-weight: 600; font-display: swap; }
+
+:root {
+  --bg: #FFFAF3; --fg: #1A1715; --soft: #5E5852; --faint: #A8A096; --rule: #E7DFD3; --tint: #F08A4B; --chip: #FFE7C6; --dot: #1A1715;
+  --sphere-a: #FFE7C6; --sphere-b: #F6B98A; --card: #FFFDF9; --well: #F4EDE2; --wire: #D9CFC0;
+  --head: 'New Order', system-ui, sans-serif; --body: 'Avenir Next', system-ui, sans-serif; --mono: ui-monospace, 'SF Mono', Menlo, monospace;
+  --out: cubic-bezier(.22, 1, .36, 1); --spring: cubic-bezier(.34, 1.56, .64, 1);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #141312; --fg: #F3EFE8; --soft: #B5AEA5; --faint: #6F6962; --rule: #2A2826; --tint: #FFC99A; --chip: rgba(255, 231, 198, .12); --dot: #FFFAF3; --sphere-a: #6B5440; --sphere-b: #2C221B; --card: #1C1A18; --well: #242120; --wire: #3A3632; color-scheme: dark; } }
+:root[data-theme="dark"] { --bg: #141312; --fg: #F3EFE8; --soft: #B5AEA5; --faint: #6F6962; --rule: #2A2826; --tint: #FFC99A; --chip: rgba(255, 231, 198, .12); --dot: #FFFAF3; --sphere-a: #6B5440; --sphere-b: #2C221B; --card: #1C1A18; --well: #242120; --wire: #3A3632; color-scheme: dark; }
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--fg); font: 400 16px/1.75 var(--body); -webkit-font-smoothing: antialiased; min-height: 100vh; display: grid; justify-items: center; align-items: start; }
+a { color: inherit; text-decoration: none; }
+.col { width: min(624px, calc(100vw - 32px)); /* wide enough for the bio's middle sentence on 1 line */ padding: max(48px, 9vh) 0 400px; }
+
+/* the theme dot */
+.specs { position: fixed; top: 22px; right: 22px; width: 40px; height: 36px; padding: 0; border: 0; background: none; cursor: pointer; z-index: 10; display: grid; place-items: center;
+  --lens: #FFF0DC; --lens-on: #F7D3A0; } /* warm cream lenses in light mode, deepening a shade on hover */
+.specs svg { width: 24px; height: auto; overflow: visible; display: block; }
+.specs .frame path { fill: none; stroke: var(--fg); stroke-width: 30; stroke-linecap: round; stroke-linejoin: round; transition: stroke .4s; }
+.specs .lens { fill: var(--lens); transition: fill .45s cubic-bezier(.3, .7, .2, 1); }
+.specs:hover .lens, .specs:focus-visible .lens { fill: var(--lens-on); }
+.specs:focus { outline: none; }
+/* in dark mode the lenses are tinted light: you see light mode through them */
+:root[data-theme="dark"] .specs { --lens: #3A2E25; --lens-on: #8A6C50; } /* warm brown in dark mode */
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .specs { --lens: #3A2E25; --lens-on: #8A6C50; } }
+
+/* intro */
+.me { display: flex; align-items: center; gap: 14px; margin-bottom: 24px; }
+.av { position: relative; width: 50px; height: 50px; border-radius: 50%; flex: none; overflow: hidden;
+  background: radial-gradient(circle at 34% 30%, #fff 0, var(--sphere-a) 22%, var(--sphere-b) 78%, var(--sphere-b) 100%); box-shadow: inset -4px -6px 12px rgba(0, 0, 0, .12); }
+.av img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.me h1 { font: 500 17px/1.3 var(--body); margin: 0; }
+.role { margin: 0; font: 400 15px/1.3 var(--body); color: var(--soft); }
+.bio p { margin: 0 0 16px; font-size: 16.5px; line-height: 1.8; color: var(--soft); text-wrap: pretty; }
+.bio p:last-child { margin-bottom: 0; }
+.bio strong { font-weight: 500; color: var(--fg); }
+.bio .cta { margin-top: 18px; font-size: 13.5px; color: var(--faint); }
+.cta a { color: var(--faint); font-weight: 400; }
+.cta .t { text-decoration: underline 2px; text-decoration-color: transparent; text-underline-offset: 3px; transition: text-decoration-color .18s, color .18s; }
+.cta i { font-style: normal; display: inline-block; margin-left: 3px; transition: transform .2s var(--out), color .2s; }
+.cta a:hover { color: var(--fg); } .cta a:hover .t { text-decoration-color: currentColor; } .cta a:hover i { transform: translate(2px, -2px); color: var(--tint); }
+
+/* inline products, as in the media kit's footer: the mark centred on the text, and on hover a 2px underline fades
+   in under the words only (never the mark) while the words darken; the mark does the moving */
+.il { color: var(--fg); font-weight: 500; white-space: nowrap; text-decoration: none; }
+.il .t { text-decoration: underline 2px; text-decoration-color: transparent; text-underline-offset: 3px; transition: text-decoration-color .18s, color .18s; }
+.il:hover .t { text-decoration-color: currentColor; }
+.ic { display: inline-block; width: 1.42em; height: 1.24em; vertical-align: middle; position: relative; top: -.14em; margin: -.4em .26em -.3em 0; }
+
+/* social: grey and still; the one you're on darkens, and 1 shared label glides between them, resizing to each
+   handle, like the timeline card */
+.social { position: relative; display: flex; gap: 2px; margin: 2px 0 0 -6px; }
+.so { position: relative; display: grid; place-items: center; width: 28px; height: 26px; color: var(--faint); transition: color .2s; will-change: transform; }
+.so svg { width: 15px; height: 15px; fill: currentColor; }
+.so[aria-label="X"] svg { width: 13.5px; height: 13.5px; } /* the X glyph fills its whole box, so it reads taller than the rest */
+.so[aria-label="LinkedIn"] svg { width: 13.5px; height: 13.5px; } /* the LinkedIn square reads heavier than the others */
+.so[aria-label="YouTube"] svg { width: 17px; height: 17px; }
+.so[aria-label="Spotify"] svg { width: 15px; height: 15px; }
+.so:hover { color: var(--fg); }
+
+/* writing: a ruler of months with a preview card */
+.writing { position: relative; z-index: 40; margin-top: 40px; }
+.tl { position: relative; user-select: none; }
+.tl-rc { cursor: pointer; }
+.tl-axis { width: 100%; height: 64px; overflow: visible; display: block; }
+.tl-axis line { stroke: var(--faint); stroke-width: 1; stroke-linecap: round; transition: stroke .35s, stroke-width .35s; }
+.tl-axis line.mo { stroke: var(--rule); } .tl-axis line.pt { stroke: var(--fg); stroke-width: 1.5; } .tl-axis line.pt.on { stroke: var(--tint); stroke-width: 2; }
+.tl-axis text { font: 500 10px var(--mono); fill: var(--faint); text-anchor: middle; }
+.tl-axis line.pt.job { stroke: var(--faint); stroke-dasharray: 2 2; } .tl-axis line.pt.job.on { stroke: var(--tint); stroke-dasharray: none; }
+
+/* the pile: a still stack on a faint desk grid, no card around it; just the title and date beneath */
+/* no will-change here: it froze the cards' raster at their original size, so scaled-up vectors and text went soft */
+.rc-card { position: absolute; left: 0; top: 74px; z-index: 30; opacity: 0; }
+.rc-clip { position: relative; }
+.rc-pane { position: absolute; left: 0; top: 0; width: 380px; opacity: 0; transform: translateX(var(--dx, 0)); filter: blur(3px); transition: opacity .26s, transform .38s var(--out), filter .26s; }
+.rc-pane.in { opacity: 1; transform: none; filter: none; }
+.rc-pane.out { opacity: 0; transform: translateX(var(--dx, 0)); filter: blur(3px); transition-duration: .2s, .3s, .2s; pointer-events: none; }
+.pile { position: relative; width: 380px; height: 310px; }
+.pi { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%) translate(var(--x), var(--y)) rotate(var(--r)) scale(var(--s, 1)); cursor: grab; user-select: none; touch-action: none; -webkit-user-drag: none; }
+.pi.drag { cursor: grabbing; } /* keeps its own layer while dragged */
+.pi.home { transition: translate .62s cubic-bezier(.34, 1.56, .64, 1), rotate .62s cubic-bezier(.34, 1.56, .64, 1); }
+.pi.media { border-radius: 5px; --lift: 0 1px 2px rgba(30, 18, 6, .1), 0 5px 12px -4px rgba(30, 18, 6, .2), 0 20px 36px -14px rgba(30, 18, 6, .55); box-shadow: var(--lift); }
+.pi.media img, .pi.media video { display: block; max-width: 270px; max-height: 200px; width: auto; height: auto; border-radius: 5px; pointer-events: none; }
+.pi.drag.media, .pi.drag.doc, .pi.drag.job { box-shadow: 0 2px 3px rgba(30, 18, 6, .1), 0 10px 20px -6px rgba(30, 18, 6, .22), 0 30px 48px -16px rgba(30, 18, 6, .55); }
+.pi-play { position: absolute; left: 50%; top: 50%; width: 36px; height: 36px; margin: -18px 0 0 -18px; border-radius: 50%; display: grid; place-items: center;
+  background: linear-gradient(180deg, #6f6af8 0%, #5a55f0 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22), inset 0 -1px 0 rgba(20, 14, 90, .18), 0 0 0 1px rgba(255, 255, 255, .28), 0 4px 12px -2px rgba(40, 30, 140, .35);
+  transition: filter .2s, transform .2s; cursor: pointer; }
+.pi-play:hover { transform: scale(1.06); }
+.pi-play svg { width: 17px; height: 17px; fill: #fff; margin-left: 0; }
+/* hovering a clip changes nothing; only the play button itself responds */
+.pi-play:hover { filter: brightness(1.1); }
+.pile.empty { height: 0; }
+.pi-loom { position: absolute; left: 10px; bottom: 10px; display: flex; align-items: center; gap: 4px; padding: 3px 6px 3px 4px; border-radius: 999px; background: #fff; color: #1d1b2e; font: 600 10px/1 var(--body); box-shadow: 0 2px 8px rgba(0, 0, 0, .15); pointer-events: none; }
+.pi-loom svg { width: 11px; height: 11px; }
+.pi.sticker .pi-tile { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 12px; background: #fff; border: 3px solid #fff; box-shadow: 0 0 0 1px rgba(0, 0, 0, .1), 0 8px 14px -8px rgba(0, 0, 0, .45); }
+.pi.sticker svg { width: 26px; height: 26px; }
+.pi.doc, .pi.job { width: 210px; padding: 9px 11px 12px; background: #fff; border: 1px solid #2B2622; border-radius: 4px; display: flex; flex-direction: column; gap: 6px; color: #2B2622;
+  box-shadow: 0 1px 2px rgba(30, 18, 6, .1), 0 5px 12px -4px rgba(30, 18, 6, .18), 0 20px 36px -14px rgba(30, 18, 6, .5); }
+.pi-doc-bar { display: flex; gap: 3px; margin-bottom: 1px; } .pi-doc-bar i { width: 5px; height: 5px; border-radius: 50%; border: 1px solid #2B2622; }
+.pi-doc-t, .pi-job-t { font: 600 12.5px/1.15 var(--body); letter-spacing: -.005em; }
+.pi-doc-img { height: 40px; border: 1px solid #2B2622; background: linear-gradient(to top right, transparent calc(50% - .6px), #2B2622 50%, transparent calc(50% + .6px)), linear-gradient(to bottom right, transparent calc(50% - .6px), #2B2622 50%, transparent calc(50% + .6px)); }
+.pi-doc-l { height: 4px; border-radius: 2px; background: #D9D3CA; }
+.pi-job-k { font: 500 9.5px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: #8A8178; }
+.pi-job-h { font: 600 10px/1 var(--body); color: #2B2622; margin-top: 3px; }
+.pi-job-apply { align-self: flex-start; margin-top: 4px; padding: 4px 9px; border-radius: 999px; background: #2B2622; color: #fff; font: 600 10.5px/1 var(--body); }
+.pi.stamp { padding: 6px 12px; border: 2px solid var(--tint); border-radius: 6px; color: var(--tint); font: 700 13px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase;
+  background: color-mix(in srgb, var(--bg) 70%, transparent); box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--bg) 90%, transparent), inset 0 0 0 3.5px var(--tint); mix-blend-mode: multiply; }
+:root[data-theme="dark"] .pi.stamp { mix-blend-mode: normal; }
+.rc-cap { position: relative; left: 50%; transform: translateX(-50%); display: flex; width: max-content; max-width: calc(100vw - 32px); align-items: baseline; gap: 10px; margin-top: 6px; text-decoration: none; color: var(--fg); white-space: nowrap; }
+.rc-t { font: 500 15px/1.3 var(--body); text-decoration: underline 1px; text-decoration-color: var(--rule); text-underline-offset: 4px; transition: text-decoration-color .18s; }
+.rc-t i { font-style: normal; display: inline-block; margin-left: 4px; color: var(--faint); transition: transform .2s var(--out), color .2s; }
+.rc-cap:hover .rc-t { text-decoration-color: currentColor; } .rc-cap:hover .rc-t i { transform: translate(2px, -2px); color: var(--tint); }
+.rc-cap time { font: 500 11px/1 var(--mono); color: var(--faint); white-space: nowrap; order: -1; }
+
+.si { animation: staggerIn .7s var(--out) both; animation-delay: calc(var(--i) * 80ms + 80ms); }
+@keyframes staggerIn { from { opacity: 0; transform: translateY(8px); filter: blur(2px); } }
+
+/* dev options (not in the final site) */
+.dev { position: fixed; left: 12px; bottom: 12px; z-index: 20; display: grid; gap: 6px; font: 500 11px/1 var(--body); color: var(--faint); background: var(--bg); border: 1px solid var(--rule); border-radius: 10px; padding: 9px 10px; opacity: .55; transition: opacity .2s; }
+.dev:hover { opacity: 1; }
+.dev div { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+.dev b { font-weight: 600; color: var(--soft); width: 76px; }
+.dev button { border: 1px solid var(--rule); background: none; color: var(--soft); border-radius: 6px; padding: 3px 7px; font: inherit; cursor: pointer; }
+.dev button.on { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.dev a { color: var(--faint); text-decoration: underline; }
+
+@media (max-width: 640px) { .dev { display: none; } }
+@media (prefers-reduced-motion: reduce) { .si { animation: none; } }
+
+/* "Open?": the first click on a card offers the link instead of leaving the page; a second click (or a click on
+   the offer) goes there. 5 ways to show the offer, picked in the dev panel ("Open"), set as html[data-ask]. */
+.rc-t { background: linear-gradient(var(--chip), var(--chip)) no-repeat 0 82% / 0% 62%; transition: text-decoration-color .18s, background-size .38s var(--out), color .25s; }
+.rc-cap { transition: background-color .28s var(--out), padding .28s var(--out), color .28s, margin-top .3s var(--out); border-radius: 999px; }
+.rc-cap time { position: relative; } .rc-cap time > span { display: inline-block; transition: opacity .22s, transform .3s var(--out); }
+.rc-q, .rc-h { position: absolute; right: 0; top: 0; white-space: nowrap; }
+.rc-q, .rc-h { opacity: 0; transform: translateY(5px); color: var(--tint); } .rc-h { color: var(--soft); }
+.rc-open { display: inline-flex; align-items: center; gap: 3px; max-width: 0; overflow: hidden; opacity: 0; padding: 0; margin-left: -10px; border-radius: 999px;
+  background: var(--fg); color: var(--bg); font: 600 11px/1 var(--mono); letter-spacing: .04em; align-self: center;
+  transition: max-width .32s var(--out), opacity .2s, padding .32s var(--out), margin .32s var(--out), transform .2s var(--out); }
+.rc-open i { font-style: normal; }
+.rc-tag { position: absolute; left: 0; top: 0; z-index: 90; pointer-events: none; opacity: 0; transform: translate(14px, 14px) scale(.85); transform-origin: 0 0;
+  background: var(--fg); color: var(--bg); font: 600 11px/1 var(--mono); padding: 6px 8px; border-radius: 6px; white-space: nowrap; box-shadow: 0 0 0 1px color-mix(in srgb, var(--bg) 55%, transparent), 0 4px 10px rgba(0, 0, 0, .18); transition: opacity .18s, transform .22s var(--out); }
+.pi { transition: outline-offset .3s var(--out), outline-color .3s; outline: 1.5px dashed transparent; outline-offset: 0; }
+.ask .pi { cursor: pointer; }
+@keyframes rc-nudge { 40% { transform: translateX(3px); } }
+@keyframes rc-pop { 0% { transform: translateX(-50%) scale(.96); } 60% { transform: translateX(-50%) scale(1.03); } 100% { transform: translateX(-50%) scale(1); } }
+
+/* 1 Pill: the title is highlighted and an "Open" pill slides out beside it */
+[data-ask="pill"] .ask .rc-t { background-size: 100% 62%; text-decoration-color: transparent; }
+[data-ask="pill"] .ask .rc-t > i { color: var(--tint); transform: translate(2px, -2px); }
+[data-ask="pill"] .ask .rc-open { max-width: 80px; opacity: 1; padding: 5px 8px 5px 9px; margin-left: 2px; animation: rc-nudge .5s .2s var(--out); }
+[data-ask="pill"] .rc-cap:hover .rc-open { transform: translateX(2px); }
+
+/* 2 Ask: the date turns into the question, "Open?", and the link underlines in orange */
+[data-ask="ask"] .ask .rc-d { opacity: 0; transform: translateY(-5px); }
+[data-ask="ask"] .ask .rc-q { opacity: 1; transform: none; }
+[data-ask="ask"] .ask .rc-t { text-decoration-color: var(--tint); text-decoration-thickness: 1.5px; }
+[data-ask="ask"] .ask .rc-t > i { color: var(--tint); transform: translate(2px, -2px); }
+
+/* 3 Button: the caption itself becomes a button */
+[data-ask="button"] .ask .rc-cap { background: var(--fg); color: var(--bg); padding: 8px 14px 8px 13px; animation: rc-pop .4s var(--out); }
+[data-ask="button"] .ask .rc-cap time { color: color-mix(in srgb, var(--bg) 55%, transparent); }
+[data-ask="button"] .ask .rc-t { text-decoration-color: transparent; }
+[data-ask="button"] .ask .rc-t > i { color: var(--bg); transform: translate(2px, -2px); }
+
+/* 4 Tag: a small "Open ↗" label rides with your cursor over the pile */
+[data-ask="tag"] .ask .rc-tag { opacity: 1; transform: translate(14px, 14px) scale(1); }
+[data-ask="tag"] .ask .rc-t { text-decoration-color: currentColor; }
+[data-ask="tag"] .ask .rc-t > i { color: var(--tint); transform: translate(2px, -2px); }
+
+/* 5 Frame: the card you clicked gets a dashed frame and the caption says "Click again" */
+[data-ask="frame"] .ask .pi.picked { outline-color: var(--tint); outline-offset: 6px; }
+[data-ask="frame"] .ask .rc-d { opacity: 0; transform: translateY(-5px); }
+[data-ask="frame"] .ask .rc-h { opacity: 1; transform: none; }
+[data-ask="frame"] .ask .rc-t > i { color: var(--tint); transform: translate(2px, -2px); }
+
+/* the edge on pictures and clips: 5 versions to choose between (dev panel, "Edge"), set as html[data-edge].
+   All crisp: solid 1px lines or solid white, never a soft half-transparent ring. */
+[data-edge="hair"] .pi.media { outline: 1px solid rgba(26, 23, 21, .16); outline-offset: -1px; }       /* a thin dark hairline */
+/* a thin solid white keyline, drawn on top of the picture so a hover (the clips brighten) never hides it */
+[data-edge="inset"] .pi.media::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 calc(1px / var(--s, 1)) var(--keyline); pointer-events: none; z-index: 3; }
+/* the keyline is near-black on the light page and white on the dark one */
+:root { --keyline: #1F1B18; } /* near-black in both themes (Tom: try black outlines in dark mode too) */
+[data-edge="paper"] .pi.media { padding: 4px; background: #fff; border-radius: 3px; }                   /* a white print border */
+[data-edge="paper"] .pi.media img, [data-edge="paper"] .pi.media video { border-radius: 1px; }
+[data-edge="matte"] .pi.media { border-radius: 9px; box-shadow: 0 0 0 1px rgba(26, 23, 21, .1), var(--lift); }   /* rounder, with a faint ring outside */
+[data-edge="matte"] .pi.media img, [data-edge="matte"] .pi.media video { border-radius: 9px; }
+[data-edge="none"] .pi.media { outline: none; }                                                           /* no edge, just the shadow */
+:root[data-theme="dark"][data-edge="hair"] .pi.media { outline-color: rgba(255, 255, 255, .14); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"])[data-edge="hair"] .pi.media { outline-color: rgba(255, 255, 255, .14); } }
+
+/* no focus halo on the links after a click (Tom: never); the caption and media-kit links included */
+a:focus, a:focus-visible, .rc-cap:focus, .rc-cap:focus-visible { outline: none; box-shadow: none; }
+a { -webkit-tap-highlight-color: transparent; }
+
+/* piles of 6+ cards use smaller cards, so the pile stays clear of the ruler above and the title below */
+.pile.big .pi.media img, .pile.big .pi.media video { max-width: 220px; max-height: 160px; }
+
+/* ---------- Click: the pile dims and a card to open sits on top (html[data-click]) ---------- */
+[data-cap="off"] .rc-cap { display: none; }
+.pi { transition-property: outline-offset, outline-color, filter, opacity, --hp; transition-duration: .3s, .3s, .4s, .4s, .18s; }
+/* out of focus: a little darker and softer, never see-through */
+.focus .pi { filter: brightness(.82) saturate(.85) blur(1.5px); }
+:root[data-theme="dark"] .focus .pi { filter: brightness(.6) saturate(.8) blur(1.5px); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .focus .pi { filter: brightness(.6) saturate(.8) blur(1.5px); } }
+.rc-go { position: absolute; left: 50%; top: calc(var(--pt, 0px) + 155px); z-index: 80; translate: -50% -50%; display: none; flex-direction: column; align-items: flex-start; gap: 6px;
+  border: 0; padding: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; opacity: 0; pointer-events: none; }
+.rc-go > span, .rc-go .go-bar { display: none; }
+.focus .rc-go { opacity: 1; pointer-events: auto; }
+.rc-go .go-a i { font-style: normal; display: inline-block; transition: transform .2s var(--out); }
+.rc-go:hover .go-a i { transform: translate(2px, -2px); }
+.rc-go:focus { outline: none; }
+
+/* 1 Ticket: a cream ticket drops onto the pile, perforated, with the date stub on top */
+[data-click="ticket"] .rc-go { display: flex; width: 250px; padding: 16px 18px 14px; background: #FFF4E2; color: #1A1715; border-radius: 10px; transform: rotate(-1.5deg) translateY(-14px);
+  box-shadow: 0 2px 3px rgba(30, 18, 6, .12), 0 18px 34px -12px rgba(30, 18, 6, .5); transition: opacity .25s, transform .4s cubic-bezier(.34, 1.4, .64, 1), box-shadow .25s; }
+[data-click="ticket"] .rc-go .go-k { display: block; font: 500 11px/1 var(--mono); color: #8A7B6A; padding-bottom: 10px; width: 100%; border-bottom: 1.5px dashed #E2CFB4; }
+[data-click="ticket"] .rc-go .go-t { display: block; font: 600 18px/1.25 var(--body); padding-top: 4px; }
+[data-click="ticket"] .rc-go .go-a { display: block; align-self: flex-end; font: 600 13px/1 var(--body); color: #C2622A; }
+[data-click="ticket"] .focus .rc-go { transform: rotate(-1.5deg) translateY(0); }
+[data-click="ticket"] .rc-go:hover { transform: rotate(0deg) translateY(-3px); box-shadow: 0 2px 3px rgba(30, 18, 6, .12), 0 26px 44px -14px rgba(30, 18, 6, .6); }
+
+/* 2 Pull: a white index card slides up out of the pile, ruled like a notebook */
+[data-click="pull"] .rc-go { display: flex; width: 240px; padding: 14px 18px 16px; color: #1A1715; border-radius: 4px; transform: translateY(70px);
+  background: #fff repeating-linear-gradient(transparent 0 23px, #EADFD0 23px 24px); background-position: 0 30px;
+  box-shadow: 0 1px 2px rgba(30, 18, 6, .15), 0 20px 36px -14px rgba(30, 18, 6, .5); transition: opacity .2s, transform .45s cubic-bezier(.22, 1, .36, 1), box-shadow .25s; }
+[data-click="pull"] .rc-go .go-k { display: block; font: 500 11px/1 var(--mono); color: #C2622A; }
+[data-click="pull"] .rc-go .go-t { display: block; font: 600 17px/24px var(--body); }
+[data-click="pull"] .rc-go .go-a { display: block; font: 500 13px/24px var(--body); color: #5E5852; }
+[data-click="pull"] .focus .rc-go { transform: translateY(0); }
+[data-click="pull"] .rc-go:hover { transform: translateY(-4px); box-shadow: 0 1px 2px rgba(30, 18, 6, .15), 0 28px 46px -14px rgba(30, 18, 6, .6); }
+
+/* 3 Press: one big button, the date in a chip, that grows out of the pile */
+[data-click="press"] .rc-go { display: flex; flex-direction: row; align-items: center; gap: 12px; padding: 10px 20px 10px 10px; background: var(--fg); color: var(--bg); border-radius: 999px; white-space: nowrap;
+  transform: scale(.85); box-shadow: 0 16px 34px -12px rgba(0, 0, 0, .6); transition: opacity .2s, transform .35s cubic-bezier(.34, 1.56, .64, 1), background-color .2s; }
+[data-click="press"] .rc-go .go-k { display: block; font: 500 11px/1 var(--mono); padding: 7px 10px; border-radius: 999px; background: color-mix(in srgb, var(--bg) 16%, transparent); }
+[data-click="press"] .rc-go .go-t { display: block; font: 600 16px/1 var(--body); }
+[data-click="press"] .rc-go .go-a { display: block; font-size: 0; } [data-click="press"] .rc-go .go-a i { font-size: 16px; color: var(--tint); }
+[data-click="press"] .focus .rc-go { transform: scale(1); }
+[data-click="press"] .rc-go:hover { transform: scale(1.04); }
+
+/* 4 Sticky: a peach sticky note slapped on top of the pile */
+[data-click="sticky"] .rc-go { display: flex; width: 200px; min-height: 170px; padding: 18px 18px 16px; background: #FFD9A8; color: #2B2622; border-radius: 2px 2px 18px 2px; transform: rotate(-4deg) scale(1.15);
+  box-shadow: 0 1px 1px rgba(30, 18, 6, .1), 0 14px 22px -10px rgba(30, 18, 6, .45); transition: opacity .15s, transform .32s cubic-bezier(.34, 1.56, .64, 1), box-shadow .25s; }
+[data-click="sticky"] .rc-go .go-k { display: block; font: 500 11px/1 var(--mono); color: #9A6A3A; }
+[data-click="sticky"] .rc-go .go-t { display: block; font: 600 20px/1.2 var(--head); flex: 1; }
+[data-click="sticky"] .rc-go .go-a { display: block; font: 600 13px/1 var(--body); }
+[data-click="sticky"] .focus .rc-go { transform: rotate(-4deg) scale(1); }
+[data-click="sticky"] .rc-go:hover { transform: rotate(-1deg) scale(1.03) translateY(-2px); box-shadow: 0 1px 1px rgba(30, 18, 6, .1), 0 22px 30px -12px rgba(30, 18, 6, .5); }
+
+/* 5 Window: a small browser window with the real address, like a preview of where you're going */
+[data-click="window"] .rc-go { display: flex; gap: 0; width: 290px; background: #fff; color: #1A1715; border-radius: 10px; overflow: hidden; transform: scale(.94) translateY(8px);
+  box-shadow: 0 0 0 1px rgba(26, 23, 21, .08), 0 24px 44px -14px rgba(30, 18, 6, .55); transition: opacity .2s, transform .35s cubic-bezier(.22, 1, .36, 1); }
+[data-click="window"] .rc-go .go-bar { display: flex; align-items: center; gap: 5px; width: 100%; padding: 9px 10px; background: #F3EEE7; border-bottom: 1px solid #E7DFD3; }
+[data-click="window"] .rc-go .go-bar > i { width: 8px; height: 8px; border-radius: 50%; background: #E0D6C8; } 
+[data-click="window"] .rc-go .go-bar > i:nth-child(1) { background: #FF6159; } [data-click="window"] .rc-go .go-bar > i:nth-child(2) { background: #FFBD2E; } [data-click="window"] .rc-go .go-bar > i:nth-child(3) { background: #28C941; }
+[data-click="window"] .rc-go .go-url { flex: 1; margin-left: 8px; padding: 4px 8px; border-radius: 5px; background: #fff; font: 500 10.5px/1 var(--mono); color: #8A7B6A; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+[data-click="window"] .rc-go .go-k { display: block; padding: 14px 16px 0; font: 500 11px/1 var(--mono); color: #8A7B6A; }
+[data-click="window"] .rc-go .go-t { display: block; padding: 6px 16px 0; font: 600 18px/1.25 var(--body); }
+[data-click="window"] .rc-go .go-a { display: inline-block; margin: 14px 16px 16px; padding: 8px 14px; border-radius: 999px; background: #1A1715; color: #FFFAF3; font: 600 13px/1 var(--body); transition: background-color .2s; }
+[data-click="window"] .focus .rc-go { transform: scale(1) translateY(0); }
+[data-click="window"] .rc-go:hover { transform: translateY(-3px); } [data-click="window"] .rc-go:hover .go-a { background: #C2622A; }
+
+/* corner handles (a transform box): everything ramps with --k (0 at the edge of a visible corner's zone, 1 on it) */
+@property --hp { syntax: '<number>'; inherits: true; initial-value: 0; }
+.rc-hd { position: fixed; left: 0; top: 0; width: 0; height: 0; z-index: 70; pointer-events: none; --deg: 0deg; --k: 0; }
+/* one handle per live corner, each placed on its corner and faded by its own strength */
+.rc-sq { position: absolute; left: 0; top: 0; width: 10px; height: 10px; background: #fff; border: 1.5px solid #9B86F3; border-radius: 2px; pointer-events: none;
+  opacity: var(--k, 0); transform: translate(-50%, -50%) rotate(var(--deg, 0deg)); box-shadow: 0 1px 3px rgba(60, 40, 140, .3); }
+.hd-near, .hd-near * { cursor: crosshair !important; }
+/* the card's own drop shadow turns purple (and a touch deeper) as you near its corner */
+.pi.media, .pi.doc, .pi.job { box-shadow: var(--lift, 0 1px 2px rgba(30, 18, 6, .1), 0 5px 12px -4px rgba(30, 18, 6, .18), 0 20px 36px -14px rgba(30, 18, 6, .5)), 0 22px 42px -14px rgba(139, 112, 240, calc(var(--hp) * .75)), 0 4px 14px -4px rgba(139, 112, 240, calc(var(--hp) * .35)); }
+.pi.sticker .pi-tile { box-shadow: 0 0 0 1px rgba(0, 0, 0, .1), 0 8px 14px -8px rgba(0, 0, 0, .45), 0 10px 22px -8px rgba(139, 112, 240, calc(var(--hp) * .8)); }
+/* lines keep their on-screen thickness at any size: widths divide by the card's scale */
+.pi-edge { position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 calc(2px / var(--s, 1)) rgba(177, 158, 248, var(--ea, 0)); pointer-events: none; z-index: 5;
+  -webkit-mask: radial-gradient(circle var(--L, 130px) at var(--ex) var(--ey), #000 0, transparent 100%); mask: radial-gradient(circle var(--L, 130px) at var(--ex) var(--ey), #000 0, transparent 100%); }
+.pi-edge.all { -webkit-mask: none; mask: none; }
+/* the job/doc cards' dark outline is drawn as an inset (borders can't go thinner than 1px, so they'd thicken as it grows) */
+.pi.doc, .pi.job { border: 0; }
+.pi.doc::before, .pi.job::before { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 calc(1px / var(--s, 1)) #2B2622; pointer-events: none; }
+.pi { transform-origin: 50% 50%; }
+
+/* corner effects, v3: the shadow only gains purple (its dark part eases back as the purple comes in, so it never gets
+   darker); the purple edge is the black outline's exact width and place and replaces it, the black fading out by
+   the same gradient the purple fades in; everything updates instantly with the pointer */
+.pi { transition-duration: .3s, .3s, .4s, .4s, 0s; }
+.pi.media, .pi.doc, .pi.job { --sa: calc(1 - var(--hp) * .45);
+  box-shadow: 0 1px 2px rgba(30, 18, 6, calc(.1 * var(--sa))), 0 5px 12px -4px rgba(30, 18, 6, calc(.2 * var(--sa))), 0 20px 36px -14px rgba(30, 18, 6, calc(.55 * var(--sa))),
+    0 calc(20px / var(--s, 1)) calc(40px / var(--s, 1)) calc(-12px / var(--s, 1)) rgba(177, 158, 248, calc(var(--hp) * .6 * var(--pur))), 0 calc(4px / var(--s, 1)) calc(14px / var(--s, 1)) calc(-4px / var(--s, 1)) rgba(177, 158, 248, calc(var(--hp) * .35 * var(--pur))); }
+.pi-edge { --lw: calc(1px / var(--s, 1)); box-shadow: inset 0 0 0 var(--lw) rgba(155, 134, 243, var(--ea, 0)); }
+[data-edge="inset"] .pi.media::after, .pi.doc::before, .pi.job::before {
+  -webkit-mask: radial-gradient(circle var(--kL, 130px) at var(--kex, 0%) var(--key, 0%), rgba(0, 0, 0, calc(1 - var(--kea, 0))) 0, #000 100%);
+  mask: radial-gradient(circle var(--kL, 130px) at var(--kex, 0%) var(--key, 0%), rgba(0, 0, 0, calc(1 - var(--kea, 0))) 0, #000 100%); }
+.pi.kl-off::after, .pi.kl-off::before { opacity: 0 !important; }
+/* stickers (Notion, Figma, Loom) wear the same outline as the cards: the white rim is padding now, so the outline,
+   the purple corner edge and the corner handle all trace the tile's real outer edge */
+.pi.sticker .pi-tile { position: relative; border: 0; padding: 3px; --sa: calc(1 - var(--hp) * .45);
+  box-shadow: 0 8px 14px -8px rgba(0, 0, 0, calc(.45 * var(--sa))), 0 10px 22px -8px rgba(177, 158, 248, calc(var(--hp) * .7)); }
+.pi.sticker .pi-tile::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 calc(1px / var(--s, 1)) var(--keyline); pointer-events: none;
+  -webkit-mask: radial-gradient(circle var(--kL, 130px) at var(--kex, 0%) var(--key, 0%), rgba(0, 0, 0, calc(1 - var(--kea, 0))) 0, #000 100%);
+  mask: radial-gradient(circle var(--kL, 130px) at var(--kex, 0%) var(--key, 0%), rgba(0, 0, 0, calc(1 - var(--kea, 0))) 0, #000 100%); }
+.pi.sticker.kl-off .pi-tile::after { opacity: 0; }
+
+/* cards that hang off the page (dragged or enlarged) never add scrollbars: no sideways scrolling ever, and no
+   up-down scrolling while the real content fits the window (home.js sets html.fits) */
+html, body { overflow-x: clip; }
+html.fits, html.fits body { overflow-y: hidden; }
+
+/* scale and tilt are registered so they can animate (a card dragged off settles back to a normal size and angle) */
+@property --s { syntax: '<number>'; inherits: true; initial-value: 1; }
+@property --r { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+
+/* how much purple the corner shadow carries: less on the dark page, where it glows more (and its size never grows
+   with a scaled-up card: the blur and offset above divide by the card's scale) */
+:root { --pur: 1; } :root[data-theme="dark"] { --pur: .5; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --pur: .5; } }
+
+/* holding a corner handle: a purple ring over the card's own shape, fading in and out, while the black outline fades
+   the other way */
+.pi-ring { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 6; box-shadow: inset 0 0 0 calc(1px / var(--s, 1)) #9B86F3; opacity: 0; transition: opacity .28s ease; }
+.pi-ring.on { opacity: 1; }
+.pi.cover > .pi-ring { box-shadow: inset 0 0 0 calc(1.5px / var(--s, 1)) #9B86F3; }
+.pl-back > .pi-ring { box-shadow: inset 0 0 0 calc(2.5px / var(--s, 1)) #9B86F3; }
+[data-edge="inset"] .pi.media::after, .pi.cover::after, .pi.doc::before, .pi.job::before, .pi.sticker .pi-tile::after { transition: opacity .28s ease; }
+.pi.kl-fade::after, .pi.kl-fade::before, .pi.kl-fade .pi-tile::after { opacity: 0 !important; }
+/* the inline "work with us" link in the Traffic copy: reads as text, underlines and nudges its arrow on hover */
+.bio a.work { color: var(--fg); font-weight: 500; text-decoration: none; }
+.bio a.work .t { text-decoration: underline 1.5px; text-decoration-color: color-mix(in srgb, currentColor 30%, transparent); text-underline-offset: 3px; transition: text-decoration-color .18s; }
+.bio a.work i { font-style: normal; display: inline-block; margin-left: 2px; transition: transform .2s var(--out), color .2s; }
+.bio a.work:hover .t { text-decoration-color: currentColor; } .bio a.work:hover i { transform: translate(2px, -2px); color: var(--tint); }
+.dev[hidden] { display: none; }

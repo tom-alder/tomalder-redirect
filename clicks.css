@@ -1,0 +1,180 @@
+/* What a click on a pile does (clicks.js): 10 concepts. Everything lives inside .rc-go, which sits in the pane;
+   --gx/--gy/--gw/--gh/--gr describe the top card (centre, size, tilt), --px/--py/--pb the pile, --cx/--cy the click. */
+@property --fx { syntax: '<length>'; inherits: false; initial-value: 0px; }
+@property --fy { syntax: '<length>'; inherits: false; initial-value: 0px; }
+@property --ry { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+@property --ls { syntax: '<number>'; inherits: false; initial-value: 1; }
+.pi { transform: translate(-50%, -50%) translate(var(--x), var(--y)) translate(var(--fx), var(--fy)) perspective(1400px) rotate(var(--r)) rotateY(var(--ry)) scale(calc(var(--s, 1) * var(--ls)));
+  transition: outline-offset .3s, outline-color .3s, filter .45s, opacity .4s, --hp 0s,
+    --fx .7s cubic-bezier(.2, .9, .2, 1), --fy .7s cubic-bezier(.2, .9, .2, 1), --ry .26s cubic-bezier(.6, 0, .9, .5), --ls .5s cubic-bezier(.2, .9, .2, 1); }
+[data-cap] .rc-cap { display: none; }
+.rc-go { position: absolute; left: 0; top: 0; width: 0; height: 0; translate: none; display: block !important; opacity: 1 !important; pointer-events: none !important; transform: none;
+  border: 0; padding: 0; background: none; box-shadow: none; }
+.rc-go > * { position: absolute; pointer-events: none; }
+.focus .rc-go .g-hit, .focus .rc-go .g-disc { pointer-events: auto; cursor: pointer; }
+.rc-go svg { width: 14px; height: 14px; display: inline-block; vertical-align: -2px; transition: transform .25s cubic-bezier(.2, .9, .2, 1); }
+.rc-go .g-hit:hover svg { transform: translate(2px, -2px); }
+/* out of focus: darker and softer, never see-through (the top card stays crisp where the concept uses it) */
+.focus .pi { filter: brightness(.86) saturate(.85) blur(1.4px); }
+:root[data-theme="dark"] .focus .pi { filter: brightness(.55) saturate(.8) blur(1.4px); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .focus .pi { filter: brightness(.55) saturate(.8) blur(1.4px); } }
+[data-click="flip"] .focus .pi.go-top, [data-click="tab"] .focus .pi.go-top, [data-click="placard"] .focus .pi.go-top { filter: none; }
+
+/* 1 Flip: the top card turns edge-on, and its back (a library card) turns in to face you */
+.g-flip { left: calc(var(--gx) - var(--gw) / 2); top: calc(var(--gy) - var(--gh) / 2); width: var(--gw); height: var(--gh); box-sizing: border-box; padding: 18px 20px 16px;
+  display: flex; flex-direction: column; gap: 8px; color: #2B2622; border-radius: 6px; overflow: hidden;
+  background: #FBF4E6 linear-gradient(#E9B8A6, #E9B8A6) no-repeat 0 46px / 100% 1.5px; box-shadow: inset 0 0 0 1px #1F1B18, 0 18px 34px -14px rgba(30, 18, 6, .55);
+  transform: perspective(1400px) rotate(var(--gr)) rotateY(-90deg); transition: transform .3s cubic-bezier(.1, .5, .25, 1); }
+.g-in .g-flip { transform: perspective(1400px) rotate(var(--gr)) rotateY(0deg); transition-delay: .25s; }
+.g-flip .g-hole { position: absolute; left: 50%; top: 10px; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%; background: var(--bg); box-shadow: inset 0 1px 2px rgba(0, 0, 0, .25); }
+.g-flip .g-stamp { align-self: flex-end; margin-top: 2px; padding: 4px 8px; font: 600 10.5px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: #C2622A; border: 1.5px solid #C2622A; border-radius: 4px; transform: rotate(-5deg); opacity: .85; }
+.g-flip .g-t { font: 600 19px/1.2 var(--head); letter-spacing: -.01em; margin-top: 6px; }
+.g-flip .g-lines { display: grid; gap: 9px; margin-top: auto; } .g-flip .g-lines i { height: 1px; background: #E3D6C2; } .g-flip .g-lines i:nth-child(2) { width: 82%; } .g-flip .g-lines i:nth-child(3) { width: 60%; }
+.g-flip .g-act { align-self: flex-start; margin-top: 10px; font: 600 13px/1 var(--body); color: #1A1715; border-bottom: 1.5px solid #C2622A; padding-bottom: 3px; }
+.g-flip:hover { box-shadow: inset 0 0 0 1px #1F1B18, 0 24px 42px -14px rgba(30, 18, 6, .6); }
+
+/* 2 Tab: a folder tab slides up from behind the top card and carries the title */
+.g-tab { left: var(--gx); top: var(--gy); display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 14px 6px 12px; box-sizing: border-box; max-width: 300px;
+  font: 600 13px/1 var(--body); color: #2B2622; background: #FFE7C6; border-radius: 10px 10px 0 0; box-shadow: inset 0 0 0 1px #1F1B18, 0 -6px 14px -8px rgba(30, 18, 6, .3);
+  transform-origin: 0 100%; transform: rotate(var(--gr)) translate(calc(var(--gw) / -2 + 18px), calc(var(--gh) / -2 - 28px + 34px)); transition: transform .5s cubic-bezier(.2, 1.2, .3, 1); }
+.g-in .g-tab { transform: rotate(var(--gr)) translate(calc(var(--gw) / -2 + 18px), calc(var(--gh) / -2 - 28px)); }
+.g-in .g-tab:hover { transform: rotate(var(--gr)) translate(calc(var(--gw) / -2 + 18px), calc(var(--gh) / -2 - 32px)); }
+.g-tab .g-dot { width: 8px; height: 8px; border-radius: 50%; background: #F08A4B; flex: none; }
+.g-tab .g-t { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* 3 Receipt: a slip prints out from under the pile, line by line */
+.g-rcpt { left: var(--px); top: calc(var(--pb) - 26px); width: 230px; margin-left: -115px; padding: 34px 16px 22px; box-sizing: border-box; display: grid; gap: 7px; justify-items: center; text-align: center;
+  font: 500 11px/1.35 var(--mono); color: #2B2622; background: #FFFDF8; box-shadow: 0 10px 24px -12px rgba(30, 18, 6, .45), inset 0 0 0 1px rgba(31, 27, 24, .12);
+  -webkit-mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / 10px 100%; mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / 10px 100%;
+  clip-path: inset(0 0 100% 0); transition: clip-path .9s steps(9, end); }
+.g-in .g-rcpt { clip-path: inset(0 0 0 0); }
+.g-rcpt b { font-weight: 700; letter-spacing: .14em; font-size: 10.5px; } .g-rcpt .g-rule { width: 100%; height: 0; border-top: 1.5px dashed #CDBFAA; }
+.g-rcpt .g-t { font: 600 14px/1.25 var(--body); color: #1A1715; } .g-rcpt .g-u { color: #8A7B6A; font-size: 10px; word-break: break-all; }
+.g-rcpt .g-act { padding: 6px 8px; transition: background-color .2s, color .2s; } .g-rcpt:hover .g-act { background: #1A1715; color: #FFFDF8; }
+.g-rcpt .g-thx { color: #A8A096; font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; }
+
+/* 4 Message: a quicker.chat moment, typing dots that become a link preview of the piece */
+.g-msg { left: var(--px); top: var(--py); width: 260px; margin-left: -130px; transform: translateY(-50%); }
+.g-msg .g-typing { position: absolute; left: 0; top: 50%; display: flex; gap: 5px; padding: 13px 15px; border-radius: 20px 20px 20px 6px; background: #F2ECE3; box-shadow: inset 0 0 0 1px #1F1B18, 0 10px 22px -10px rgba(30, 18, 6, .45);
+  transform: translateY(-50%) scale(.6); transform-origin: 0 100%; opacity: 0; transition: transform .35s cubic-bezier(.2, 1.4, .3, 1), opacity .2s; }
+.g-msg .g-typing i { width: 7px; height: 7px; border-radius: 50%; background: #8A7B6A; animation: g-dot 1s ease-in-out infinite; } .g-msg .g-typing i:nth-child(2) { animation-delay: .15s; } .g-msg .g-typing i:nth-child(3) { animation-delay: .3s; }
+@keyframes g-dot { 0%, 60%, 100% { transform: translateY(0); opacity: .5; } 30% { transform: translateY(-4px); opacity: 1; } }
+.g-in .g-msg .g-typing { transform: translateY(-50%) scale(1); opacity: 1; }
+.g-ready .g-msg .g-typing { transform: translateY(-50%) scale(.6); opacity: 0; transition-duration: .2s; }
+.g-msg .g-link { display: grid; gap: 4px; padding: 0 0 12px; overflow: hidden; border-radius: 20px 20px 20px 6px; background: #F2ECE3; color: #1A1715; box-shadow: inset 0 0 0 1px #1F1B18, 0 14px 30px -12px rgba(30, 18, 6, .5);
+  transform: translateY(-50%) scale(.85); transform-origin: 0 100%; opacity: 0; pointer-events: none; transition: transform .45s cubic-bezier(.2, 1.3, .3, 1), opacity .25s; position: absolute; left: 0; top: 50%; width: 260px; }
+.g-ready .g-msg .g-link { transform: translateY(-50%) scale(1); opacity: 1; pointer-events: auto; }
+.g-msg .g-th { display: block; height: 128px; background: center / cover; border-bottom: 1px solid #1F1B18; transition: transform .5s cubic-bezier(.2, .9, .2, 1); }
+.g-msg .g-link:hover .g-th { transform: scale(1.04); }
+.g-msg .g-t { padding: 8px 14px 0; font: 600 14px/1.3 var(--body); } .g-msg .g-h { padding: 0 14px; font: 500 12px/1 var(--body); color: #8A7B6A; }
+
+/* 5 Cursor: the pointer becomes a soft disc with an arrow; the title trails beside it */
+[data-click="cursor"] .focus .pile, [data-click="cursor"] .focus .pile * { cursor: none !important; }
+.g-cur { left: 0; top: 0; }
+.g-cur .g-disc { position: absolute; left: -28px; top: -28px; width: 56px; height: 56px; display: grid; place-items: center; border-radius: 50%; background: var(--fg); color: var(--bg);
+  box-shadow: 0 10px 24px -8px rgba(0, 0, 0, .45); transform: scale(0) rotate(var(--tilt, 0deg)); transition: transform .35s cubic-bezier(.2, 1.4, .3, 1); }
+.g-cur .g-disc svg { width: 20px; height: 20px; }
+.g-in .g-cur .g-disc { transform: scale(1) rotate(var(--tilt, 0deg)); }
+.g-cur .g-lab { position: absolute; left: 38px; top: -16px; display: grid; gap: 3px; max-width: 220px; padding: 8px 11px; border-radius: 10px; background: var(--bg); color: var(--fg);
+  font: 600 13px/1.25 var(--body); box-shadow: inset 0 0 0 1px var(--keyline), 0 10px 22px -12px rgba(0, 0, 0, .45); opacity: 0; transform: translateX(-6px); transition: opacity .25s .08s, transform .35s .08s cubic-bezier(.2, .9, .2, 1); }
+.g-cur .g-lab em, .g-key .g-lab em, .g-fan em { font: 500 10.5px/1 var(--mono); font-style: normal; color: var(--faint); }
+.g-in .g-cur .g-lab { opacity: 1; transform: none; }
+
+/* 6 Keycap: a real return key; it presses down under you */
+.g-key { left: var(--px); top: var(--py); display: flex; align-items: center; gap: 14px; transform: translate(-50%, calc(-50% - 10px)); opacity: 0; transition: transform .45s cubic-bezier(.2, 1.4, .3, 1), opacity .2s; }
+.g-in .g-key { transform: translate(-50%, -50%); opacity: 1; }
+.g-key .g-cap { position: relative; width: 74px; height: 66px; flex: none; border-radius: 12px; box-sizing: border-box; padding: 9px 10px; display: flex; flex-direction: column; justify-content: space-between;
+  font: 600 11px/1 var(--body); color: #4A433C; background: linear-gradient(#FFFDF9, #EFE8DD); box-shadow: inset 0 0 0 1px #1F1B18, inset 0 -5px 0 #DCD2C3, 0 5px 0 -1px #1F1B18, 0 12px 20px -8px rgba(30, 18, 6, .5);
+  transition: transform .12s, box-shadow .12s; }
+.g-key .g-cap b { align-self: flex-end; font-size: 18px; color: #1A1715; }
+.g-key:hover .g-cap { transform: translateY(4px); box-shadow: inset 0 0 0 1px #1F1B18, inset 0 -3px 0 #DCD2C3, 0 1px 0 0 #1F1B18, 0 5px 10px -6px rgba(30, 18, 6, .5); }
+.g-key:active .g-cap { transform: translateY(5px); box-shadow: inset 0 0 0 1px #1F1B18, inset 0 -2px 0 #DCD2C3, 0 0 0 0 #1F1B18; }
+.g-key .g-lab { display: grid; gap: 4px; max-width: 220px; padding: 10px 13px; border-radius: 10px; background: var(--bg); color: var(--fg); font: 600 15px/1.25 var(--body); box-shadow: inset 0 0 0 1px var(--keyline), 0 12px 24px -14px rgba(0, 0, 0, .5); }
+
+/* 7 Spotlight: the page dims around the pile; a Spotlight bar shows where you're going */
+.g-dim { position: absolute; left: -200vw; top: -200vh; width: 400vw; height: 400vh; z-index: 0; pointer-events: none;
+  background: radial-gradient(circle 260px at calc(200vw + var(--px)) calc(200vh + var(--py)), transparent 50%, rgba(10, 8, 6, .5)); animation: g-fade .35s ease-out both; }
+.g-dim.g-out { animation: g-fade .25s ease-in reverse both; }
+@keyframes g-fade { from { opacity: 0; } to { opacity: 1; } }
+.g-spot { left: var(--px); top: var(--py); width: 380px; margin-left: -190px; transform: translateY(-50%) scale(.96); opacity: 0; transition: transform .35s cubic-bezier(.2, 1.2, .3, 1), opacity .2s;
+  border-radius: 14px; overflow: hidden; background: rgba(255, 252, 247, .86); -webkit-backdrop-filter: blur(22px) saturate(1.4); backdrop-filter: blur(22px) saturate(1.4);
+  box-shadow: inset 0 0 0 1px rgba(31, 27, 24, .5), 0 30px 60px -20px rgba(0, 0, 0, .55); color: #1A1715; }
+.g-in .g-spot { transform: translateY(-50%) scale(1); opacity: 1; }
+.g-spot .g-q { display: flex; align-items: center; gap: 10px; padding: 14px 16px; font: 500 15px/1 var(--body); border-bottom: 1px solid rgba(31, 27, 24, .12); }
+.g-spot .g-q svg { width: 16px; height: 16px; color: #8A7B6A; }
+.g-spot .g-typed { display: inline-block; overflow: hidden; white-space: nowrap; max-width: 0; border-right: 1.5px solid #C2622A; padding-right: 1px; animation: g-type .7s steps(var(--n), end) .2s forwards, g-caret .9s steps(1) infinite; }
+@keyframes g-type { to { max-width: 320px; } } @keyframes g-caret { 50% { border-color: transparent; } }
+.g-spot .g-row { display: flex; align-items: center; gap: 10px; margin: 6px; padding: 9px 10px; border-radius: 8px; background: rgba(240, 138, 75, .16); font: 600 13.5px/1.2 var(--body); }
+.g-spot .g-row:hover { background: rgba(240, 138, 75, .26); }
+.g-spot .g-fav { width: 18px; height: 18px; border-radius: 5px; background: #FFE7C6; box-shadow: inset 0 0 0 1px #1F1B18; flex: none; }
+.g-spot .g-t { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .g-spot .g-h { color: #8A7B6A; font-weight: 500; font-size: 12px; }
+.g-spot kbd { font: 600 11px/1 var(--body); padding: 4px 6px; border-radius: 5px; background: #fff; box-shadow: inset 0 0 0 1px rgba(31, 27, 24, .3), 0 1px 0 rgba(31, 27, 24, .3); }
+
+/* 8 Fan: the pile breathes open; the title is set in the space it leaves */
+.g-fan { left: var(--px); top: var(--py); display: grid; gap: 7px; justify-items: center; text-align: center; max-width: 260px; padding: 16px 20px; border-radius: 16px;
+  background: color-mix(in srgb, var(--bg) 82%, transparent); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); box-shadow: inset 0 0 0 1px var(--keyline), 0 20px 40px -16px rgba(0, 0, 0, .45);
+  color: var(--fg); transform: translate(-50%, -50%) scale(.9); opacity: 0; transition: transform .6s .12s cubic-bezier(.2, 1.1, .3, 1), opacity .3s .12s; }
+.g-in .g-fan { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+.g-fan .g-t { font: 600 21px/1.2 var(--head); letter-spacing: -.01em; } .g-fan .g-act { font: 600 13px/1 var(--body); border-bottom: 1.5px solid var(--tint); padding-bottom: 3px; }
+
+/* 9 Hold: press and hold the disc; the ring fills and it opens; let go early and nothing happens */
+.g-hold { left: var(--cx); top: var(--cy); display: grid; justify-items: center; gap: 10px; transform: translate(-50%, -40px); }
+.g-hold .g-disc { position: relative; width: 80px; height: 80px; border: 0; padding: 0; border-radius: 50%; background: var(--fg); color: var(--bg); font: 600 12px/1 var(--body); letter-spacing: .04em;
+  box-shadow: 0 14px 30px -10px rgba(0, 0, 0, .5); transform: scale(0); transition: transform .4s cubic-bezier(.2, 1.4, .3, 1); }
+.g-in .g-hold .g-disc { transform: scale(1); } .g-holding .g-hold .g-disc { transform: scale(.94); transition-duration: .2s; }
+.g-hold svg { position: absolute; inset: -6px; width: 92px; height: 92px; transform: rotate(-90deg); }
+.g-hold .g-track { fill: none; stroke: color-mix(in srgb, var(--fg) 18%, transparent); stroke-width: 3; }
+.g-hold .g-ring { fill: none; stroke: var(--tint); stroke-width: 3; stroke-linecap: round; stroke-dasharray: 226.2; stroke-dashoffset: 226.2; transition: stroke-dashoffset .25s ease-out; }
+.g-holding .g-hold .g-ring { stroke-dashoffset: 0; transition: stroke-dashoffset .72s cubic-bezier(.4, 0, .6, 1); }
+.g-hold .g-lab { max-width: 220px; padding: 7px 11px; border-radius: 9px; background: var(--bg); color: var(--fg); font: 600 13px/1.25 var(--body); text-align: center; box-shadow: inset 0 0 0 1px var(--keyline);
+  opacity: 0; transform: translateY(-4px); transition: opacity .25s .1s, transform .3s .1s; }
+.g-in .g-hold .g-lab { opacity: 1; transform: none; }
+
+/* 10 Placard: the top card comes forward and a gallery label slides in beside it */
+.g-plac { left: calc(var(--gR) + 18px); top: var(--gy); width: 190px; box-sizing: border-box; padding: 14px 15px 13px; display: grid; gap: 4px; color: #1A1715; background: #FFFDF9;
+  box-shadow: inset 0 0 0 1px #1F1B18, 0 14px 28px -14px rgba(30, 18, 6, .5); transform: translate(-10px, -50%); opacity: 0; transition: transform .5s .1s cubic-bezier(.2, .9, .2, 1), opacity .3s .1s; }
+.g-in .g-plac { transform: translate(0, -50%); opacity: 1; }
+.g-plac .g-t { font: 600 16px/1.2 var(--head); } .g-plac .g-by { font: 500 12px/1.3 var(--body); color: #5E5852; margin-top: 2px; } .g-plac .g-med { font: italic 500 12px/1.3 var(--body); color: #8A7B6A; }
+.g-plac .g-rule { height: 1px; background: #E3D6C2; margin: 8px 0 6px; } .g-plac .g-act { font: 600 12.5px/1 var(--body); }
+
+/* ---------- the Cursor click (picked): the pointer becomes a disc that follows on a spring, its label centred under
+   it. Black with an arrow for a piece, Loom-purple play over a Loom clip, Spotify-green play over a playlist sleeve. */
+.gc { position: fixed; left: 0; top: 0; z-index: 90; pointer-events: none; }
+.gc-disc { position: absolute; left: -28px; top: -28px; width: 56px; height: 56px; display: grid; place-items: center; border-radius: 50%;
+  background: #1A1715; color: #FFFAF3; box-shadow: 0 10px 24px -8px rgba(0, 0, 0, .45);
+  scale: 0; rotate: var(--tilt, 0deg); transition: scale .32s cubic-bezier(.2, 1.4, .3, 1), background-color .2s; } /* scale and tilt kept apart: the tilt changes every frame and would restart a shared transition */
+.gc-disc svg { width: 20px; height: 20px; }
+.gc.on .gc-disc { scale: 1; }
+/* leaving: no bounce, it shrinks straight into the pointer's tip (the spring carries it there as it shrinks) */
+.gc:not(.on) .gc-disc { transition: scale .3s cubic-bezier(.4, 0, .6, 1), background-color .2s; }
+.gc:not(.on) .gc-lab { transition: opacity .14s, transform .2s; }
+.gc-leave, .gc-leave * { cursor: none !important; }
+.gc[data-kind="loom"] .gc-disc { background: linear-gradient(180deg, #6f6af8, #5a55f0); color: #fff; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22), 0 0 0 1px rgba(255, 255, 255, .28), 0 10px 24px -8px rgba(40, 30, 140, .5); }
+.gc[data-kind="spotify"] .gc-disc { background: linear-gradient(180deg, #2BE36F, #1DB954); color: #0D0B22; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25), 0 0 0 1px rgba(255, 255, 255, .3), 0 10px 24px -8px rgba(0, 60, 20, .5); }
+.gc[data-kind="loom"] .gc-disc svg, .gc[data-kind="spotify"] .gc-disc svg { width: 24px; height: 24px; margin-left: 2px; }
+/* the label: centred under the disc, the title on 1 or 2 balanced lines */
+.gc-lab { position: absolute; left: 0; top: 38px; width: max-content; max-width: 250px; box-sizing: border-box; padding: 8px 12px 9px; display: grid; gap: 3px; justify-items: center; text-align: center;
+  border-radius: 10px; background: var(--bg); color: var(--fg); box-shadow: inset 0 0 0 1px var(--keyline), 0 10px 22px -12px rgba(0, 0, 0, .45);
+  transform: translate(-50%, -4px); opacity: 0; transition: opacity .22s .06s, transform .32s .06s cubic-bezier(.2, .9, .2, 1); }
+.gc.on .gc-lab { opacity: 1; transform: translate(-50%, 0); }
+.gc-lab em { font: 500 10.5px/1 var(--mono); font-style: normal; color: var(--faint); }
+.gc-lab span { font: 600 13.5px/1.28 var(--body); text-wrap: balance; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-width: 150px; }
+.gc-on, .gc-on * { cursor: none !important; }
+/* the sleeve's fixed play button gives way to the green play cursor */
+.pl-play { display: none; }
+/* behind the cursor, the pile only darkens slightly: no blur, nothing see-through */
+.focus .pi { filter: brightness(.93) saturate(.92); }
+:root[data-theme="dark"] .focus .pi { filter: brightness(.78) saturate(.9); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .focus .pi { filter: brightness(.78) saturate(.9); } }
+
+/* while the cursor is up, a clip's own play button steps aside so there is only ever 1 */
+.focus .pi-play { opacity: 0; transition: opacity .2s; }
+/* behind the cursor the pile fades as 1 shape toward the page (a group opacity, so no card shows through another),
+   the same in light and dark; replaces darkening the cards */
+.focus .pi, :root[data-theme="dark"] .focus .pi { filter: none; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .focus .pi { filter: none; } }
+.pile { transition: opacity .35s ease; }
+.focus .pile { opacity: .42; }
+/* the cursor's label card is always cream with dark type, in light and dark mode */
+.gc-lab { background: #FFFAF3; color: #1A1715; box-shadow: inset 0 0 0 1px #1F1B18, 0 10px 22px -12px rgba(0, 0, 0, .45); }
+.gc-lab em { color: #8A7B6A; }

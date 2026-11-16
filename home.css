@@ -1,7 +1,7 @@
+/* fonts come from the device, never served as files: their licence doesn't cover a public website. Every Mac, iPhone
+   and iPad has Avenir Next built in, so it's named straight in --body (no @font-face, which would hide the built-in
+   one if it failed); elsewhere the page falls back to the system font. */
 @font-face { font-family: 'New Order'; src: local('New Order Semibold'), local('NewOrder-Semibold'); font-weight: 600; font-display: swap; }
-@font-face { font-family: 'Avenir Next'; src: local('Avenir Next Regular'), local('AvenirNext-Regular'); font-weight: 400; font-display: swap; }
-@font-face { font-family: 'Avenir Next'; src: local('Avenir Next Medium'), local('AvenirNext-Medium'); font-weight: 500; font-display: swap; }
-@font-face { font-family: 'Avenir Next'; src: local('Avenir Next Demi Bold'), local('AvenirNext-DemiBold'); font-weight: 600; font-display: swap; }
 
 :root {
   --bg: #FFFAF3; --fg: #1A1715; --soft: #5E5852; --faint: #A8A096; --rule: #E7DFD3; --tint: #F08A4B; --chip: #FFE7C6; --dot: #1A1715;
@@ -15,6 +15,8 @@
 
 * { box-sizing: border-box; }
 html, body { margin: 0; }
+/* phones: no text inflation when turned sideways, and no double-tap zoom (pinch zoom still works) */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; touch-action: manipulation; }
 body { background: var(--bg); color: var(--fg); font: 400 16px/1.75 var(--body); -webkit-font-smoothing: antialiased; min-height: 100vh; display: grid; justify-items: center; align-items: start; }
 a { color: inherit; text-decoration: none; }
 .col { width: min(624px, calc(100vw - 32px)); /* wide enough for the bio's middle sentence on 1 line */ padding: max(48px, 9vh) 0 400px; }
@@ -40,6 +42,7 @@ a { color: inherit; text-decoration: none; }
 .role { margin: 0; font: 400 15px/1.3 var(--body); color: var(--soft); }
 .bio p { margin: 0 0 16px; font-size: 16.5px; line-height: 1.8; color: var(--soft); text-wrap: pretty; }
 .bio p:last-child { margin-bottom: 0; }
+.bio .nw { white-space: nowrap; } /* "1-minute" never breaks at its hyphen on a narrow phone */
 .bio strong { font-weight: 500; color: var(--fg); }
 .bio .cta { margin-top: 18px; font-size: 13.5px; color: var(--faint); }
 .cta a { color: var(--faint); font-weight: 400; }
@@ -69,7 +72,7 @@ a { color: inherit; text-decoration: none; }
 .writing { position: relative; z-index: 40; margin-top: 40px; }
 .tl { position: relative; user-select: none; }
 .tl-rc { cursor: pointer; }
-.tl-axis { width: 100%; height: 64px; overflow: visible; display: block; }
+.tl-axis { width: 100%; height: 64px; overflow: visible; display: block; touch-action: pan-y; } /* a finger slides along it to scrub; up-down still scrolls */
 .tl-axis line { stroke: var(--faint); stroke-width: 1; stroke-linecap: round; transition: stroke .35s, stroke-width .35s; }
 .tl-axis line.mo { stroke: var(--rule); } .tl-axis line.pt { stroke: var(--fg); stroke-width: 1.5; } .tl-axis line.pt.on { stroke: var(--tint); stroke-width: 2; }
 .tl-axis text { font: 500 10px var(--mono); fill: var(--faint); text-anchor: middle; }
@@ -79,11 +82,12 @@ a { color: inherit; text-decoration: none; }
 /* no will-change here: it froze the cards' raster at their original size, so scaled-up vectors and text went soft */
 .rc-card { position: absolute; left: 0; top: 74px; z-index: 30; opacity: 0; }
 .rc-clip { position: relative; }
-.rc-pane { position: absolute; left: 0; top: 0; width: 380px; opacity: 0; transform: translateX(var(--dx, 0)); filter: blur(3px); transition: opacity .26s, transform .38s var(--out), filter .26s; }
+.rc-pane { position: absolute; left: 0; top: 0; width: 380px; transform-origin: 0 0; /* a pile shrunk to fit a phone (timelines.js fitPane) scales from its top-left */ opacity: 0; transform: translateX(var(--dx, 0)); filter: blur(3px); transition: opacity .26s, transform .38s var(--out), filter .26s; }
 .rc-pane.in { opacity: 1; transform: none; filter: none; }
 .rc-pane.out { opacity: 0; transform: translateX(var(--dx, 0)); filter: blur(3px); transition-duration: .2s, .3s, .2s; pointer-events: none; }
 .pile { position: relative; width: 380px; height: 310px; }
-.pi { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%) translate(var(--x), var(--y)) rotate(var(--r)) scale(var(--s, 1)); cursor: grab; user-select: none; touch-action: none; -webkit-user-drag: none; }
+.pi { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%) translate(var(--x), var(--y)) rotate(var(--r)) scale(var(--s, 1)); cursor: grab; user-select: none; -webkit-user-select: none; -webkit-user-drag: none;
+  touch-action: pan-y; -webkit-touch-callout: none; } /* on a touchscreen an up-down swipe on a card still scrolls the page; a sideways drag moves the card */
 .pi.drag { cursor: grabbing; } /* keeps its own layer while dragged */
 .pi.home { transition: translate .62s cubic-bezier(.34, 1.56, .64, 1), rotate .62s cubic-bezier(.34, 1.56, .64, 1); }
 .pi.media { border-radius: 5px; --lift: 0 1px 2px rgba(30, 18, 6, .1), 0 5px 12px -4px rgba(30, 18, 6, .2), 0 20px 36px -14px rgba(30, 18, 6, .55); box-shadow: var(--lift); }
@@ -311,6 +315,7 @@ a { -webkit-tap-highlight-color: transparent; }
 
 /* cards that hang off the page (dragged or enlarged) never add scrollbars: no sideways scrolling ever, and no
    up-down scrolling while the real content fits the window (home.js sets html.fits) */
+html { overflow-x: hidden; } /* for browsers without clip (Safari before 16): the line below replaces it everywhere else */
 html, body { overflow-x: clip; }
 html.fits, html.fits body { overflow-y: hidden; }
 
@@ -337,3 +342,26 @@ html.fits, html.fits body { overflow-y: hidden; }
 .bio a.work i { font-style: normal; display: inline-block; margin-left: 2px; transition: transform .2s var(--out), color .2s; }
 .bio a.work:hover .t { text-decoration-color: currentColor; } .bio a.work:hover i { transform: translate(2px, -2px); color: var(--tint); }
 .dev[hidden] { display: none; }
+
+/* ---------- touchscreens and small screens ---------- */
+/* clips never show the system's play button when a phone won't autoplay them (Low Power Mode): the still frame shows instead */
+video::-webkit-media-controls-start-playback-button { display: none !important; -webkit-appearance: none; }
+video::-webkit-media-controls { display: none !important; }
+button, .so, .il, .specs { -webkit-tap-highlight-color: transparent; }
+/* phones (and anything too narrow for the glasses to sit clear of the 624px column): they sit at the top of the page
+   and scroll away, instead of floating over the text */
+@media (max-width: 763px) { .specs { position: absolute; top: 8px; right: 6px; } .col { padding-top: max(60px, 9vh); } } /* clear of the name row even on a 320px phone */
+/* fingers: bigger targets for the small icons */
+@media (pointer: coarse) {
+  .specs { width: 48px; height: 44px; }
+  .social { gap: 4px; margin-left: -10px; }
+  .so { width: 36px; height: 36px; }
+}
+/* no hover on a touchscreen: a tap leaves nothing stuck in its hover look */
+@media (hover: none) {
+  .so:hover { color: var(--faint); }
+  .il:hover .t { text-decoration-color: transparent; }
+  .specs:hover .lens { fill: var(--lens); }
+  .bio a.work:hover .t { text-decoration-color: color-mix(in srgb, currentColor 30%, transparent); }
+  .pi-play:hover { transform: none; filter: none; }
+}

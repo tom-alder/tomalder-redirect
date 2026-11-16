@@ -23,9 +23,12 @@
   // with the OTHER theme, like sunglasses: lightly at rest, fully on hover, so you see the other mode through them.
   // Nothing moves or grows; only the shade changes. Click switches the theme.
   const isDark = () => { const t = document.documentElement.dataset.theme; return t ? t === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches; };
+  // the browser's own bar (Safari, Chrome on phones) takes the page colour, light or dark
+  const tc = document.querySelector('meta[name="theme-color"]'), syncBar = () => { if (tc) tc.content = isDark() ? '#141312' : '#FFFAF3'; };
+  syncBar(); try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', syncBar); } catch (e) {}
   $('.specs').addEventListener('click', () => {
     const next = isDark() ? 'light' : 'dark';
-    document.documentElement.dataset.theme = next; try { sessionStorage.setItem('ta-theme', next); } catch (e) {}
+    document.documentElement.dataset.theme = next; try { sessionStorage.setItem('ta-theme', next); } catch (e) {} syncBar();
   });
 
   // ---------- social: grey and still; the one you're on darkens ----------
@@ -141,7 +144,7 @@
   function qcTyping(el) {
     const D = 2, AMP = 14 + D * SW * .35, F = 1.3, IN = .45, OUT = .9, E = LM.E, cl = v => Math.max(0, Math.min(1, v));
     const st = { phase: 'rest', shrink: 0, arm: 1, tau: 0, u: 0, hover: false, outAt: null, last: 0, idle: null, nextIdle: 0 };
-    const IDLES = IDLE_SET('qc');
+    const IDLES = IDLE_SET('qc'), REST = LM.dotsPose('qc', D, 0, 1, () => 0);
     const m = new Mark(el, 'qc', { vb: ICON_VB }).drive(now => {
       const dt = st.last ? Math.min(.05, now - st.last) : 0; st.last = now;
       // at rest, a random idle every few seconds: mostly blinks, sometimes the long look-around. When it glances
@@ -155,6 +158,7 @@
       if (st.phase === 'in') { st.u = Math.min(1, st.u + dt / IN); st.shrink = E.in(st.u); st.arm = 1 - E.in(cl(st.u * 1.25)); if (st.u >= 1) { st.phase = 'wave'; st.tau = 0; } }
       else if (st.phase === 'wave') { st.tau += dt; if (!st.hover && st.outAt != null && st.tau >= st.outAt) { st.phase = 'out'; st.u = 0; st.tau = 0; st.outAt = null; } }
       else if (st.phase === 'out') { st.u = Math.min(1, st.u + dt / OUT); st.shrink = 1 - E.back(cl(st.u / .6)); st.arm = E.out(cl((st.u - .5) / .5)); if (st.u >= 1) { st.phase = 'rest'; st.shrink = 0; st.arm = 1; } }
+      if (st.phase === 'rest') return REST; // the same resting pose every frame: the very same object, so nothing is redrawn
       const wv = i => st.phase === 'wave' ? AMP * Math.max(0, Math.sin(2 * Math.PI * (F * st.tau - .17 * i))) : 0;
       return LM.dotsPose('qc', D, st.shrink, st.arm, wv);
     });
@@ -173,14 +177,18 @@
     const paras = COPY[opt.copy].paras, inline = paras.some(p => p.includes('{work}')); // copy with its own "work with us" link drops the separate media-kit line
     $('.bio').innerHTML = paras.map(p => `<p>${p.replace(/\{(sb|daily|qc)\}/g, (_, c) => chip(c)).replace('{work}', `<a class="work" href="${SPONSOR}" target="_blank" rel="noopener"><span class="t">work with us</span></a>`)}</p>`).join('')
       + (inline ? '' : `<p class="cta">Selling to founders? <a href="${SPONSOR}" target="_blank" rel="noopener"><span class="t">Here's the media kit</span><i>↗</i></a></p>`);
+    // hover loops a mark's animation; a tap (no hover on a touchscreen) plays it once, so it never gets stuck looping
+    // after you come back from the page it opened
+    const touchy = () => Site.touchy && Site.touchy();
+    const hoverOrTap = (el, on, off) => { el.addEventListener('mouseenter', () => { if (!touchy()) on(); }); el.addEventListener('mouseleave', () => { if (!touchy()) off(); });
+      el.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse') { on(); off(); } }); };
     document.querySelectorAll('.il').forEach(a => {
       const c = a.dataset.c, ic = a.querySelector('.ic');
-      if (c === 'qc') { const q = qcTyping(ic); marks.push(q.m); a.addEventListener('mouseenter', () => q.hover(true)); a.addEventListener('mouseleave', () => q.hover(false)); return; }
+      if (c === 'qc') { const q = qcTyping(ic); marks.push(q.m); hoverOrTap(a, () => q.hover(true), () => q.hover(false)); return; }
       const m = new Mark(ic, c, { vb: ICON_VB }), rest = () => m.idle(IDLE_SET(c), [4, 9]); rest(); marks.push(m);
       const motion = () => c === 'sb' ? TOSS : opt.daily === 'capture' ? CAPTURES[opt.exit] : DAILY[opt.daily];
-      a.addEventListener('mouseenter', () => m.hold(motion()));
-      a.addEventListener('mouseleave', () => m.release(rest));
-      if (c === 'sb') { const cta = $('.cta a, .bio a.work'); if (cta) { cta.addEventListener('mouseenter', () => m.hold(TOSS)); cta.addEventListener('mouseleave', () => m.release(rest)); } }
+      hoverOrTap(a, () => m.hold(motion()), () => m.release(rest));
+      if (c === 'sb') { const cta = $('.cta a, .bio a.work'); if (cta) hoverOrTap(cta, () => m.hold(TOSS), () => m.release(rest)); }
     });
   }
 

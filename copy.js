@@ -5,7 +5,7 @@ window.COPY = [
   // Tom's own copy (15 Nov 2026), the default. 290k+ is newsletter subscribers plus LinkedIn and X followers; 2 million+
   // is email opens plus social impressions across all 3, a month (said as "impressions"). {work} is the sponsor-page link.
   { id: 'traffic', name: 'Traffic', paras: [
-    'I run {sb}, a weekly strategy case study on software companies. {daily} is its daily, screenshot-sized sibling: 1 chart, 1 big idea, 1 poll, 1-minute read.',
+    'I run {sb}, a weekly strategy case study on software companies. {daily} is its daily, screenshot-sized sibling: 1 chart, 1 big idea, 1 poll, <span class="nw">1-minute</span> read.',
     'Across platforms we reach 290k+ people and do 2 million+ monthly impressions.',
     'We use that traffic as a distribution channel ({work}), and to launch our own products, like {qc}: one smart inbox for all your DMs.',
   ] },

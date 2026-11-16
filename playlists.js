@@ -42,7 +42,7 @@
 
   // the playlists as a pile on the site's own pile engine (timelines.js), so they deal, drag, resize and stack exactly
   // like the cards for every other piece. Filo is one more card in the pile.
-  let lastDown = null; document.addEventListener('pointerdown', e => { lastDown = e.target; }, true);
+  let lastDown = null, downXY = [0, 0]; document.addEventListener('pointerdown', e => { lastDown = e.target; downXY = [e.clientX, e.clientY]; }, true);
   // the green play cursor comes up with a sleeve when you click a cover (never from hovering), and stays while you
   // stay on or near the pile; moving well off to the side puts everything back to normal
   let live = null; // { card, n }
@@ -54,10 +54,23 @@
     v.style.zIndex = card.style.zIndex; requestAnimationFrame(() => v.classList.add('on')); };
   const veilOff = n => { const v = n && n.querySelector('.pl-veil'); if (!v) return; v.classList.remove('on'); setTimeout(() => { if (!v.classList.contains('on')) v.remove(); }, 320); };
   const endSleeve = () => { if (!live) return; live.card.classList.remove('flip'); veilOff(live.n); live = null; Site.gc && Site.gc.hide('sleeve'); };
-  addEventListener('pointermove', e => { if (!live) return; if (!live.card.isConnected) return endSleeve();
+  Site.plEnd = endSleeve; // the ruler calls this whenever the pile changes or goes, so a sleeve's disc never outlives it
+  // the pinned disc stays on its sleeve's edge as the page scrolls or the cover is dragged
+  const pinSpot = card => { const b = card.querySelector('.pl-back'); if (!b) return null; const r = b.getBoundingClientRect(); return [Math.max(36, Math.min(innerWidth - 36, r.left + r.width / 2)), Math.max(36, Math.min(innerHeight - 40, r.bottom))]; };
+  const repin = () => { if (!live || !Site.gc || !Site.gc.pinned || !Site.gc.pinned()) return; if (!live.card.isConnected) return endSleeve();
+    const b = live.card.querySelector('.pl-back'), r = b && b.getBoundingClientRect(); if (!r || r.bottom < 0 || r.top > innerHeight) return endSleeve(); // scrolled off: the sleeve closes
+    const q = pinSpot(live.card); if (q) Site.gc.pin(q[0], q[1]); };
+  addEventListener('scroll', repin, { passive: true });
+  addEventListener('pointermove', e => { if (!live) return; if (!live.card.isConnected) return endSleeve(); repin();
     const inside = [...live.n.querySelectorAll('.pile .pi')].some(o => { const r = o.getBoundingClientRect(); return e.clientX > r.left - 64 && e.clientX < r.right + 64 && e.clientY > r.top - 64 && e.clientY < r.bottom + 64; });
     if (!inside) endSleeve(); });
-  const startSleeve = (card, n) => { live = { card, n }; veilOn(card, n); Site.gc && Site.gc.show('sleeve', 'spotify', sleeveLabel(card)); };
+  // on a touchscreen the disc can't follow a pointer, so instead of sitting where you tapped (over the sleeve's words)
+  // it glides to the sleeve's bottom edge once the sleeve has opened, its label underneath
+  // a tap on the pinned disc where there's no card under it still plays the sleeve
+  document.addEventListener('click', e => { if (!live || !live.card.isConnected || !Site.gc || !Site.gc.hit || !Site.gc.hit(e.clientX, e.clientY)) return; if (e.target.closest && e.target.closest('.pi')) return;
+    const b = live.card.querySelector('.pl-back'); if (b && b.dataset.href) { e.preventDefault(); e.stopPropagation(); window.open(b.dataset.href, '_blank', 'noopener'); endSleeve(); } }, true); // and the pile stays
+  const startSleeve = (card, n) => { live = { card, n }; veilOn(card, n); if (!Site.gc) return; Site.gc.show('sleeve', 'spotify', sleeveLabel(card));
+    if (Site.touchy && Site.touchy()) setTimeout(() => { if (!live || live.card !== card) return; const q = pinSpot(card); if (q) Site.gc.pin(q[0], q[1]); }, 300); }; // kept on screen
   function post() {
     const covers = PL.map((p, i) => ({ cls: 'cover', id: p.id, html: `<span class="cv"><span class="pl-front"><img src="assets/pl-${p.id}.jpg" alt="${p.title} playlist cover" draggable="false"></span>
       <span class="pl-back" data-href="${p.url}" role="link"><span class="pl-play" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z"/></svg></span><span class="pl-head"><span class="pl-side">Side ${i < 3 ? 'A' : 'B'}</span><span class="pl-title">${p.title}</span></span>
@@ -75,7 +88,9 @@
       // links to the playlist. A covered cover first swings out and lands on top so its sleeve can be seen.
       onArm: (card, n) => {
         // a click on the sleeve (or a link in its copy) opens it; it never flips the cover shut
-        const hit = lastDown && lastDown.closest && (lastDown.closest('.pl-sub') || lastDown.closest('.pi.cover.flip .pl-back'));
+        // (a tap on the green disc counts as a tap on its sleeve: the disc lets taps through to whatever is under it)
+        const onDisc = live && Site.gc && Site.gc.hit && Site.gc.hit(downXY[0], downXY[1]) ? live.card.querySelector('.pl-back') : null;
+        const hit = onDisc || (lastDown && lastDown.closest && (lastDown.closest('.pl-sub') || lastDown.closest('.pi.cover.flip .pl-back')));
         if (hit) { window.open(hit.dataset.href, '_blank', 'noopener'); endSleeve(); return; }
         const all = [...n.querySelectorAll('.pi.cover')];
         if (!card || !card.classList.contains('cover')) { endSleeve(); all.forEach(c => c.classList.remove('flip')); return; }
@@ -93,6 +108,13 @@
   let on = false;
   Site.setSpotifyMode = v => { on = !!v; document.documentElement.dataset.spotify = on ? 'on' : 'off'; };
   // hovering the Spotify icon (once per visit to it) brings up the playlists, like hovering a piece on the ruler
-  document.addEventListener('mouseover', e => { const a = e.target.closest && e.target.closest('.so[aria-label="Spotify"]'); if (!a || a._plHover) return; a._plHover = true; if (on && Site.rcShowPost) Site.rcShowPost(post()); });
+  document.addEventListener('mouseover', e => { if (Site.touchy && Site.touchy()) return; // a tap's pretend hover doesn't count
+    const a = e.target.closest && e.target.closest('.so[aria-label="Spotify"]'); if (!a || a._plHover) return; a._plHover = true; if (on && Site.rcShowPost) Site.rcShowPost(post()); });
+  // on a touchscreen there's no hover: the first tap on the icon brings the playlists up (and scrolls them into view)
+  // instead of leaving the page; with the playlists already up, a tap goes to Spotify as normal
+  document.addEventListener('click', e => { const a = e.target.closest && e.target.closest('.so[aria-label="Spotify"]');
+    if (!a || !on || !Site.touchy || !Site.touchy() || !Site.rcShowPost) return;
+    if (document.querySelector('.rc-pane.in.pl')) return;
+    e.preventDefault(); Site.rcShowPost(post()); setTimeout(() => Site.rcReveal && Site.rcReveal(), 60); }, true);
   document.addEventListener('mouseout', e => { const a = e.target.closest && e.target.closest('.so[aria-label="Spotify"]'); if (a && !a.contains(e.relatedTarget)) a._plHover = false; });
 })();

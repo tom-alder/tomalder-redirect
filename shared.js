@@ -86,7 +86,9 @@
       const moving = Math.abs(this.lk[0] - this.lkT[0]) > .05 || Math.abs(this.lk[1] - this.lkT[1]) > .05;
       if (!this.cur && !this.fn && !moving && !this.dirty) return;
       this.dirty = false;
-      this.svg.innerHTML = LE.frame(this.state(t));
+      // a mark driven every frame (quicker.chat's) mostly draws the same resting frame: only touch the page when it changes
+      const s = this.state(t); if (s === this.lastState) return; this.lastState = s; // a driver handing back the same pose: nothing to do
+      const f = LE.frame(s); if (f !== this.lastFrame) { this.svg.innerHTML = f; this.lastFrame = f; }
     }
   }
   (function loop() { const t = now(); for (const m of live) if (!m.paused && m.el.isConnected) m.draw(t); else if (!m.el.isConnected) live.delete(m); requestAnimationFrame(loop); })();

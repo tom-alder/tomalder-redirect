@@ -64,5 +64,5 @@
 .pl-play svg { width: 28px; height: 28px; fill: #0D0B22; }
 .pi.cover.flip .pl-back:hover .pl-play { opacity: 1; transform: scale(1); }
 /* the fade behind an open sleeve: the page colour at 58%, so the cards under it look like the pile at 42% */
-.pl-veil { position: absolute; inset: -60px -300px; /* wide enough for every card and its shadow, short enough never to add a scrollbar */ background: var(--bg); opacity: 0; pointer-events: none; transition: opacity .3s ease; }
+.pl-veil { position: absolute; inset: -12px -300px -60px; /* wide enough for every card and its shadow, short enough never to add a scrollbar, and never up over the ruler */ background: var(--bg); opacity: 0; pointer-events: none; transition: opacity .3s ease; }
 .pl-veil.on { opacity: .58; }

@@ -12,6 +12,11 @@
   const T0 = Date.parse('2024-01-01'), T1 = Date.parse('2026-11-15'), span = T1 - T0, tpos = ts => (ts - T0) / span;
   const NS = 'http://www.w3.org/2000/svg';
   const h = html => { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstElementChild; };
+  // touch: when a finger (or a pen) last came down, so hover code can ignore the pretend mouse events a tap sends after it
+  Site.touchAt = -Infinity; addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse') Site.touchAt = performance.now(); }, true);
+  Site.touchy = () => performance.now() - Site.touchAt < 1200;
+  // how far a pile is scaled down to fit a narrow screen (1 = full size)
+  const zOf = el => { const p = el && el.closest && el.closest('.rc-pane'); return (p && p._z) || 1; };
   const months = (() => { const out = [], d = new Date(T0); while (d.getTime() <= T1) { out.push(new Date(d)); d.setMonth(d.getMonth() + 1); } return out; })();
 
   // real marks: Notion (Simple Icons) black on its white tile, Figma in its own colours, Loom in its purple
@@ -39,7 +44,8 @@
     if (!cards.length) return; const pr = pile.getBoundingClientRect(), cx = pr.left + pr.width / 2, cy = pr.top + pr.height / 2;
     let l = 1e9, t = 1e9, r = -1e9, b = -1e9; for (const c of cards) { const q = c.getBoundingClientRect(); if (!q.width) continue; l = Math.min(l, q.left); t = Math.min(t, q.top); r = Math.max(r, q.right); b = Math.max(b, q.bottom); }
     if (r < l) return; const mx = (l + r) / 2 - cx, my = (t + b) / 2 - cy, hw = (r - l) / 2 - 8, hh = (b - t) / 2 - 8; // 8px in from the edge: about half the sticker overlaps
-    pile.querySelectorAll('.pi.sticker').forEach(st => { if (st._x || st._y) return; st.style.setProperty('--x', (mx + +st.dataset.ax * hw).toFixed(1) + 'px'); st.style.setProperty('--y', (my + +st.dataset.ay * hh).toFixed(1) + 'px'); });
+    const z = zOf(pile); // measured on screen, placed in the pile's own (unscaled) units
+    pile.querySelectorAll('.pi.sticker').forEach(st => { if (st._x || st._y) return; st.style.setProperty('--x', ((mx + +st.dataset.ax * hw) / z).toFixed(1) + 'px'); st.style.setProperty('--y', ((my + +st.dataset.ay * hh) / z).toFixed(1) + 'px'); });
   }
   // no card starts fully buried: any card with less than ~15% of itself showing (judged against the cards stacked
   // above it) is nudged outward from the pile's centre, a step at a time, until a strip of it shows
@@ -52,7 +58,7 @@
       const min = +el.dataset.min || .2; // most cards need a strip showing; an "under" card gets a few nudges toward 60% showing, never enough to leave the pile
       for (let step = 0; step < (min > .2 ? 6 : 14) && shown(el) < min; step++) { const r = el.getBoundingClientRect(); let dx = r.left + r.width / 2 - pcx, dy = r.top + r.height / 2 - pcy; const d = Math.hypot(dx, dy);
         if (d < 4) { dx = el._seedX || -1; dy = -.6; } const k = 14 / (Math.hypot(dx, dy) || 1);
-        const ny = parseFloat(el.style.getPropertyValue('--y')) + dy * k * .35, roomUp = r.top - pr.top + 4; // mostly sideways, and never up into the ruler
+        const ny = parseFloat(el.style.getPropertyValue('--y')) + dy * k * .35, roomUp = (r.top - pr.top + 4) / zOf(pile); // mostly sideways, and never up into the ruler
         el.style.setProperty('--x', (parseFloat(el.style.getPropertyValue('--x')) + dx * k).toFixed(1) + 'px'); el.style.setProperty('--y', (dy < 0 ? Math.max(ny, parseFloat(el.style.getPropertyValue('--y')) - Math.max(0, roomUp)) : ny).toFixed(1) + 'px'); }
     }
   }
@@ -66,7 +72,7 @@
   function item(it, x, y, r, extra = '') {
     let inner;
     if (it.img) inner = `<img src="${it.img}" alt="" draggable="false">`;
-    else if (it.video) inner = `<video src="${it.video}" muted loop playsinline autoplay preload="auto"></video>${it.play ? `<span class="pi-play"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z"/></svg></span>` : ''}`;
+    else if (it.video) inner = `<video src="${it.video}" poster="${it.video.replace(/\.mp4$/, '-poster.jpg')}" muted loop playsinline autoplay preload="auto"></video>${it.play ? `<span class="pi-play"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z"/></svg></span>` : ''}`;
     else if (it.sticker) inner = `<span class="pi-tile">${STICKER[it.sticker]}</span>`;
     else if (it.doc) inner = `<span class="pi-doc-bar"><i></i><i></i><i></i></span><span class="pi-doc-t">${esc(it.doc)}</span><span class="pi-doc-img"></span><span class="pi-doc-l" style="width:88%"></span><span class="pi-doc-l" style="width:70%"></span><span class="pi-doc-l" style="width:80%"></span>`;
     else if (it.html) inner = it.html; // add-on piles (playlists.js) bring their own card markup
@@ -117,45 +123,88 @@
     const stack = () => { order.forEach((o, i) => { o.style.zIndex = i + 1; }); if (key) ORDERS.set(key, order.map(o => kids.indexOf(o))); };
     stack();
     pane._raise = el => { order = order.filter(o => o !== el); order.push(el); stack(); }; // bring a card to the true top
+    // a pile shrunk to fit a narrow screen is scaled as a whole (zOf), so pointer movement on screen is divided by that
+    // scale before it moves a card, and a card's own offsets are multiplied by it before they're compared on screen
     const offOf = (el, x, y) => { // how much of the item, at offset x/y, sits outside the rest of the pile (0..1)
-      const r = el.getBoundingClientRect(), others = [...pile.querySelectorAll(":scope > .pi")].filter(o => o !== el && !o.classList.contains('sticker') && !o.classList.contains('stamp'))
+      const z = zOf(pile), r = el.getBoundingClientRect(), others = [...pile.querySelectorAll(":scope > .pi")].filter(o => o !== el && !o.classList.contains('sticker') && !o.classList.contains('stamp'))
         // where each of the others sits AT HOME, not where it has been dragged: otherwise a card left out of the pile
         // becomes part of it, and the next card dropped beside it counts as "on the pile" and stays out too
-        .map(o => { const q = o.getBoundingClientRect(), hx = o._x || 0, hy = o._y || 0; return { left: q.left - hx, top: q.top - hy, right: q.right - hx, bottom: q.bottom - hy }; });
+        .map(o => { const q = o.getBoundingClientRect(), hx = (o._x || 0) * z, hy = (o._y || 0) * z; return { left: q.left - hx, top: q.top - hy, right: q.right - hx, bottom: q.bottom - hy }; });
       // a lone card (a job ad) has nothing under it, so it measures against its own home spot instead
-      const ex = x - (el._x || 0), ey = y - (el._y || 0), home = { left: r.left - ex - x, top: r.top - ey - y, right: r.right - ex - x, bottom: r.bottom - ey - y };
+      const ex = (x - (el._x || 0)) * z, ey = (y - (el._y || 0)) * z, home = { left: r.left - ex - x * z, top: r.top - ey - y * z, right: r.right - ex - x * z, bottom: r.bottom - ey - y * z };
       const U = others.length ? { l: Math.min(...others.map(o => o.left)), t: Math.min(...others.map(o => o.top)), r: Math.max(...others.map(o => o.right)), b: Math.max(...others.map(o => o.bottom)) }
         : { l: home.left, t: home.top, r: home.right, b: home.bottom };
       const w = Math.max(0, Math.min(r.right, U.r) - Math.max(r.left, U.l)), h = Math.max(0, Math.min(r.bottom, U.b) - Math.max(r.top, U.t));
+      const cx = (r.left + r.right) / 2, cy = (r.top + r.bottom) / 2; offOf.centreOver = cx > U.l && cx < U.r && cy > U.t && cy < U.b; // is its centre still over the pile
       return 1 - (w * h) / Math.max(1, r.width * r.height);
     };
     const place = (el, x, y, ms = 0, ease = 'cubic-bezier(.34, 1.56, .64, 1)') => { el.style.transition = ms ? `translate ${ms}ms ${ease}, rotate ${ms}ms ${ease}` : 'none'; el.style.translate = `${x}px ${y}px`; el._x = x; el._y = y; };
+    // on a touchscreen a tap opens from the click that follows it, not from the finger lifting: browsers only let a
+    // page open a new tab from a click
+    let tapEl = null, tapAt = 0;
+    pile.addEventListener('click', () => { if (!tapEl || performance.now() - tapAt > 900) return; const t = tapEl; tapEl = null; if (t.isConnected) open(t); });
+    // 2 fingers on one card pinch it bigger or smaller and twist it, like the corner handles do with a mouse
+    const pinchGeo = g => { const [a, b] = [...g.pts.values()]; return { d: Math.max(1, Math.hypot(b[0] - a[0], b[1] - a[1])), ang: Math.atan2(b[1] - a[1], b[0] - a[0]), mx: (a[0] + b[0]) / 2, my: (a[1] + b[1]) / 2 }; };
+    const pinchStart = (el, g) => { const p = pinchGeo(g); el.style.rotate = ''; el.classList.add('pinch');
+      return { ...p, s0: el._s || 1, r0: parseFloat(el.style.getPropertyValue('--r')) || 0, x0: el._x || 0, y0: el._y || 0 }; };
+    const pinchMove = (el, g) => { const P = g.pinch, p = pinchGeo(g), z = zOf(pile);
+      const sc = Math.max(.6, Math.min(3, P.s0 * p.d / P.d)); el._s = sc; el.style.setProperty('--s', sc.toFixed(3));
+      let da = (p.ang - P.ang) * 180 / Math.PI; da = ((da + 540) % 360) - 180; el.style.setProperty('--r', (P.r0 + da).toFixed(2) + 'deg');
+      place(el, P.x0 + (p.mx - P.mx) / z, P.y0 + (p.my - P.my) / z); };
     pile.addEventListener('pointerdown', e => {
-      const el = e.target.closest('.pi'); if (!el) return; e.preventDefault();
+      const el = e.target.closest('.pi'); if (!el) return;
+      const held = el._g;
+      if (held) { // another finger on a card that's already held
+        if (e.pointerType === 'mouse' || held.pts.size >= 2) return;
+        try { el.setPointerCapture(e.pointerId); } catch (er) {}
+        held.pts.set(e.pointerId, [e.clientX, e.clientY]); held.pinch = pinchStart(el, held); held.moved = true; return; }
+      // with a mouse, cancelling the press stops text selection and the browser's own image drag; a touch is left
+      // alone, because Safari then drops the click that a tap opens from
+      if (e.pointerType === 'mouse') e.preventDefault();
       // "on top" means what you see: nothing else covers it. A sticker sitting a little higher in the stack doesn't
       // count, so dragging the visible front card away always sends it to the back.
       const er = el.getBoundingClientRect(), hits = (q) => q.left < er.right && q.right > er.left && q.top < er.bottom && q.bottom > er.top;
       const shownOnTop = el.classList.contains('sticker') || ![...pile.querySelectorAll(":scope > .pi")].some(o => o !== el && !o.classList.contains('sticker') && +o.style.zIndex > +el.style.zIndex && hits(o.getBoundingClientRect()));
-      const sx = e.clientX, sy = e.clientY, ox = el._x || 0, oy = el._y || 0; let dx = 0, dy = 0, moved = false;
-      el.setPointerCapture(e.pointerId); el.classList.add('drag'); pane.dragging = true;
-      const move = ev => { dx = ev.clientX - sx; dy = ev.clientY - sy; if (Math.hypot(dx, dy) > 4) moved = true;
+      const z = zOf(pile), first = e.pointerId, sx = e.clientX, sy = e.clientY, ox = el._x || 0, oy = el._y || 0; let dx = 0, dy = 0;
+      const g = el._g = { pts: new Map([[first, [sx, sy]]]), pinch: null, moved: false, touch: e.pointerType !== 'mouse' };
+      try { el.setPointerCapture(first); } catch (er2) {} el.classList.add('drag'); pane.dragging = true;
+      const move = ev => { if (!g.pts.has(ev.pointerId)) return; g.pts.set(ev.pointerId, [ev.clientX, ev.clientY]);
+        if (g.pinch) { if (g.pts.size === 2) pinchMove(el, g); return; }
+        if (ev.pointerId !== first) return;
+        dx = (ev.clientX - sx) / z; dy = (ev.clientY - sy) / z; const far = Math.hypot(dx, dy) * z;
+        // a finger that heads up or down is probably scrolling the page: the card waits (the browser takes the touch
+        // over within a few pixels) and only follows if it's still a drag after 24px, so a scroll never nudges a card
+        if (g.touch && !g.moved && (far < 8 || (Math.abs(dy) > Math.abs(dx) * 1.2 && far < 24))) return;
+        if (far > 4) g.moved = true;
         place(el, ox + dx, oy + dy); el.style.rotate = `${Math.max(-10, Math.min(10, dx * .04))}deg`; };
-      const up = () => {
-        el.style.transition = ''; // hand transitions back to the stylesheet (the drag set its own)
+      const end = () => { el.style.transition = ''; // hand transitions back to the stylesheet (the drag set its own)
         el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', up);
-        el.classList.remove('drag'); pane.dragging = false; pane.heldUntil = performance.now() + 1100;
-        if (!moved) { el.style.rotate = ''; open(el); return; }
+        el.classList.remove('drag', 'pinch'); el._g = null; pane.dragging = false; pane.heldUntil = performance.now() + 1100; };
+      const up = ev => {
+        if (!g.pts.has(ev.pointerId)) return; g.pts.delete(ev.pointerId);
+        if (g.pinch) { if (g.pts.size) return; end(); return; } // a pinch leaves the card as it is when the last finger lifts
+        if (ev.pointerId !== first) return;
+        end();
+        // the browser took the touch over (to scroll the page): nothing was dropped and nothing was tapped, and the card
+        // goes back to exactly where it was
+        if (ev.type === 'pointercancel') { el.style.rotate = ''; place(el, ox, oy, g.moved ? 220 : 0, 'ease-out'); return; }
+        if (!g.moved) { el.style.rotate = ''; if (g.touch) { tapEl = el; tapAt = performance.now(); return; } open(el); return; }
         const x = ox + dx, y = oy + dy, off = offOf(el, x, y), isTop = shownOnTop;
         const rot0 = parseFloat(el.style.rotate) || 0;
         // 1 continuous motion: the card tilts a touch as it starts back, and the rest of the rotation happens as it
         // slides, never a separate wiggle before the slide
         const glide = (tx, ty, ms, ease = 'cubic-bezier(.33, .8, .25, 1)') => { el.style.transition = 'none';
-          const d = Math.hypot(x, y) || 1, frames = [{ translate: `${x}px ${y}px`, rotate: `${rot0}deg` }];
-            frames.push({ translate: `${tx}px ${ty}px`, rotate: '0deg' });
+          const frames = [{ translate: `${x}px ${y}px`, rotate: `${rot0}deg` }, { translate: `${tx}px ${ty}px`, rotate: '0deg' }];
           const an = el.animate(frames, { duration: ms, easing: ease });
           el.style.translate = `${tx}px ${ty}px`; el.style.rotate = ''; el._x = tx; el._y = ty; return an; };
-        if (off < .5) { glide(x, y, 320); return; } // stays where you put it, just settling its tilt
-        if (off < .88) { glide(x * .28, y * .28, 620); return; } // eases most of the way back
+        // on a phone the pile fills the screen, so "clear of it" is judged more kindly: there's no room to drag a card
+        // all the way off without it leaving the screen
+        const [stay, clear] = g.touch || innerWidth < 640 ? [.3, .6] : [.5, .88];
+        // a card made bigger (pinched, or by a corner handle) mostly hangs outside the pile, so its share outside says
+        // nothing: while its centre is still over the pile it stays where you put it
+        if ((el._s || 1) > 1.05 && offOf.centreOver) { glide(x, y, 320); return; }
+        if (off < stay) { glide(x, y, 320); return; } // stays where you put it, just settling its tilt
+        if (off < clear) { glide(x * .28, y * .28, 620); return; } // eases most of the way back
         // clear of the pile: it slides straight back in, easing in and out, and swaps layer while it's still clear,
         // so it tucks in behind (top card) or in front (any other)
         glide(0, 0, 700, 'cubic-bezier(.55, 0, .3, 1)'); // straight home, easing in and out: no swing out, no slingshot
@@ -181,12 +230,15 @@
       if (it.year) { it.tx = document.createElementNS(NS, 'text'); it.tx.textContent = it.year; svg.append(it.tx); } });
     const K = .35; // a gentle loupe
     let guard = 0, gx0 = null; // after an add-on pile opens (the Spotify icon), the ruler sits out the trip down to it
+    let touching = false; // a finger is on the ruler
+    const coarse = matchMedia('(hover: none)').matches; // a touchscreen (no hover)
     let W = 600, mx = null, lastMx = 0, k = 0, active = null, open = false, overCard = false, closeT = 0, cur = null, raf;
-    const S = { x: 0, vx: 0, o: 0, vo: 0 }, target = { x: 0, w: 300 };
+    const S = { x: 0, vx: 0, o: 0, vo: 0 }, target = { x: 0 };
     const fish = x => { if (k < .001) return x; const c = mx ?? lastMx, d = x - c, D = d < 0 ? c : W - c, a = Math.abs(d) / (D || 1); return c + Math.sign(d) * D * ((1 + k) * a / (1 + k * a)); };
     function show(p, dir) {
       clip.querySelectorAll('.rc-pane.out').forEach(n => n.remove()); // never more than 1 leaving: no stacked text
       if (cur && cur.classList.contains('focus') && Site.clickClose) Site.clickClose(cur); // a new piece: the old cursor goes
+      if (Site.plEnd) Site.plEnd(); // and so does an open playlist sleeve, with its green disc
       if (cur) { const old = cur; old.classList.remove('in'); old.classList.add('out'); old.style.setProperty('--dx', (-dir * 18) + 'px'); old.querySelectorAll('video').forEach(v => v.pause()); setTimeout(() => old.remove(), 240); }
       const n = h(pane(p)); n.dataset.key = p.title; n.style.setProperty('--dx', (dir * 18) + 'px'); clip.append(n); cur = n;
       n.querySelectorAll('video').forEach(v => { v.currentTime = 0; v.play().catch(() => {}); });
@@ -202,43 +254,62 @@
       // the title always sits the same distance (22px) below the lowest card, whatever this visit's deal did
       const gapUnder = () => { const pile = n.querySelector('.pile'), cap = n.querySelector('.rc-cap'), items = [...pile.querySelectorAll(":scope > .pi")]; if (!items.length) return;
         n.style.setProperty('--pt', '0px');
-        pile.style.marginTop = '0px'; const poke = pile.getBoundingClientRect().top - Math.min(...items.map(o => o.getBoundingClientRect().top)); if (poke > 0) { pile.style.marginTop = Math.round(poke) + 'px'; n.style.setProperty('--pt', Math.round(poke) + 'px'); } // a tilted card that pokes up pushes the pile down, never into the ruler
+        pile.style.marginTop = '0px'; const poke = (pile.getBoundingClientRect().top - Math.min(...items.map(o => o.getBoundingClientRect().top))) / zOf(pile); if (poke > 0) { pile.style.marginTop = Math.round(poke) + 'px'; n.style.setProperty('--pt', Math.round(poke) + 'px'); } // a tilted card that pokes up pushes the pile down, never into the ruler
         const pb = pile.getBoundingClientRect().bottom, low = Math.max(...items.map(o => o.getBoundingClientRect().bottom)); if (!isFinite(low)) return;
-        cap.style.marginTop = Math.max(-200, Math.round(low - pb + 22)) + 'px'; };
-      const settle = () => { unbury(n); placeStickers(n); gapUnder(); }; // after makeDraggable, so the stacking order is set
+        cap.style.marginTop = Math.max(-200, Math.round((low - pb) / zOf(pile) + 22)) + 'px'; };
+      const settle = () => { unbury(n); placeStickers(n); gapUnder(); fitPane(n); }; // after makeDraggable, so the stacking order is set
       settle(); n.querySelectorAll('img, video').forEach(m => m.addEventListener(m.tagName === 'IMG' ? 'load' : 'loadedmetadata', settle, { once: true }));
-      target.w = n.offsetWidth;
       requestAnimationFrame(() => requestAnimationFrame(() => n.classList.add('in')));
     }
+    // a pile wider than the screen (a phone) shrinks as a whole until its cards fit with 12px to spare each side; a
+    // pile that fits is left at full size. Measured from where the cards sit at home, so a card dragged out or
+    // enlarged doesn't shrink everything else.
+    function fitPane(n) {
+      if (!n || !n.isConnected) return; const z0 = n._z || 1, nr = n.getBoundingClientRect(); let L = 1e9, R = -1e9, T = 1e9, B = -1e9;
+      for (const o of n.querySelectorAll('.pile > .pi')) { const q = o.getBoundingClientRect(); if (!q.width) continue; const hx = (o._x || 0) * z0, hy = (o._y || 0) * z0, sc = o._s || 1, w = q.width / sc, hh = q.height / sc, c = q.left + q.width / 2 - hx, m = q.top + q.height / 2 - hy;
+        L = Math.min(L, (c - w / 2 - nr.left) / z0); R = Math.max(R, (c + w / 2 - nr.left) / z0); T = Math.min(T, (m - hh / 2 - nr.top) / z0); B = Math.max(B, (m + hh / 2 - nr.top) / z0); }
+      if (R < L) { L = 0; R = n.offsetWidth; T = 0; B = 0; }
+      // and on a short screen (a phone on its side) it also shrinks to fit the height, so the whole pile can be seen at once
+      const zH = innerHeight < 500 && B > T ? (innerHeight - 36) / (B - T) : 1;
+      const z = Math.max(.5, Math.min(1, (innerWidth - 24) / (R - L), zH));
+      n._z = z; n._L = L; n._R = R; n.style.scale = z < 1 ? z.toFixed(4) : '';
+    }
+    let fitW = innerWidth; addEventListener('resize', () => { if (innerWidth === fitW) return; fitW = innerWidth; fitPane(cur); });
     // a hook for add-on modes (playlists.js): show any pane under the ruler, centred, until a tick is hovered again
     // add-on piles: a post-like object (custom pile items, its own click) shown under the ruler, centred
     Site.rcShowPost = (p) => { guard = performance.now() + 4000; gx0 = null; p.i = -1; p.ts = T0 + span / 2; const dir = 0; active = p; show(p, dir); open = true; };
     Site.rcShowCustom = (n) => {
-      clip.querySelectorAll('.rc-pane.out').forEach(o => o.remove());
+      clip.querySelectorAll('.rc-pane.out').forEach(o => o.remove()); if (Site.plEnd) Site.plEnd();
       if (cur) { const old = cur; old.classList.remove('in'); old.classList.add('out'); old.style.setProperty('--dx', '0px'); old.querySelectorAll('video').forEach(v => v.pause()); setTimeout(() => old.remove(), 240); }
-      clip.append(n); cur = n; active = { i: -1, ts: T0 + span / 2, custom: true }; open = true; target.w = n.offsetWidth;
+      clip.append(n); cur = n; active = { i: -1, ts: T0 + span / 2, custom: true }; open = true; fitPane(n);
       requestAnimationFrame(() => requestAnimationFrame(() => n.classList.add('in')));
     };
     (function tick() {
-      W = el.clientWidth; svg.setAttribute('viewBox', `0 0 ${W} 64`);
-      k += ((mx == null ? 0 : K) - k) * .1;
+      W = el.clientWidth; if (W !== tick.w) { tick.w = W; svg.setAttribute('viewBox', `0 0 ${W} 64`); }
+      k += ((mx == null ? 0 : touching ? 1.3 : K) - k) * .1;
       let best = null, bd = 1e9;
       for (const it of items) {
-        const x = fish(it.x0 * W), d = mx == null ? 999 : Math.abs(x - mx), mag = Math.exp(-(((x - (mx ?? lastMx)) / 60) ** 2)) * k / K;
+        const x = fish(it.x0 * W), d = mx == null ? 999 : Math.abs(x - mx), mag = Math.exp(-(((x - (mx ?? lastMx)) / 60) ** 2)) * Math.min(1, k / K);
         if (it.post) it.ex += (((it.post === active && open) ? 4 : 0) - it.ex) * .14;
         const hgt = (it.post ? 16 : it.year ? 10 : 5) * (1 + mag * .35) + (it.post ? it.ex : 0);
-        it.ln.setAttribute('x1', x.toFixed(2)); it.ln.setAttribute('x2', x.toFixed(2)); it.ln.setAttribute('y1', (40 - hgt).toFixed(2)); it.ln.setAttribute('y2', 40);
-        if (it.tx) { it.tx.setAttribute('x', x.toFixed(2)); it.tx.setAttribute('y', 58); }
-        if (it.post) { if (d < bd) { bd = d; best = it.post; } it.ln.classList.toggle('on', it.post === active && open); }
+        // only what changed is written (at rest nothing does, which keeps a phone's battery out of it)
+        const xs = x.toFixed(2), ys = (40 - hgt).toFixed(2);
+        if (xs !== it.xs) { it.xs = xs; it.ln.setAttribute('x1', xs); it.ln.setAttribute('x2', xs); if (it.tx) it.tx.setAttribute('x', xs); }
+        if (ys !== it.ys) { if (it.ys === undefined) { it.ln.setAttribute('y2', 40); if (it.tx) it.tx.setAttribute('y', 58); } it.ys = ys; it.ln.setAttribute('y1', ys); }
+        if (it.post) { if (d < bd) { bd = d; best = it.post; } const on = it.post === active && open; if (on !== it.on) { it.on = on; it.ln.classList.toggle('on', on); } }
       }
       if (mx != null && best && bd < 34) { if (best !== active) { const dir = active ? Math.sign(best.i - active.i) : 0; active = best; show(best, dir); } open = true; closeT = 0; }
       // it stays open until you hover another piece
-      if (active) { const ax = tpos(active.ts) * W, er = el.getBoundingClientRect(); target.x = Math.max(12 - er.left, Math.min(innerWidth - er.left - target.w - 12, ax - target.w / 2)); }
+      if (active && cur) { const ax = tpos(active.ts) * W, er = el.getBoundingClientRect(), z = cur._z || 1, w = cur.offsetWidth, L = cur._L ?? 0, R = cur._R ?? w;
+        const lo = 12 - er.left - L * z, hi = innerWidth - 12 - er.left - R * z;
+        target.x = z < 1 || lo > hi ? (innerWidth - (R - L) * z) / 2 - er.left - L * z
+          : innerWidth >= 640 && !coarse ? Math.max(12 - er.left, Math.min(innerWidth - er.left - w - 12, ax - w / 2)) // desktop, as it always was
+          : Math.max(lo, Math.min(hi, ax - w * z / 2)); }
       if (S.o < .02 && open) { S.x = target.x; S.vx = 0; }
       [S.x, S.vx] = spring(S.x, target.x, S.vx); [S.o, S.vo] = spring(S.o, open ? 1 : 0, S.vo, 260, 30);
       const o = Math.max(0, Math.min(1, S.o));
-      card.style.transform = `translate(${S.x.toFixed(1)}px, ${((1 - o) * -6).toFixed(2)}px)`;
-      card.style.opacity = o.toFixed(3); card.style.pointerEvents = o > .5 ? 'auto' : 'none';
+      const tf = `translate(${S.x.toFixed(1)}px, ${((1 - o) * -6).toFixed(2)}px)`, op = o.toFixed(3), pe = o > .5 ? 'auto' : 'none';
+      if (tf !== tick.tf) { tick.tf = tf; card.style.transform = tf; } if (op !== tick.op) { tick.op = op; card.style.opacity = op; } if (pe !== tick.pe) { tick.pe = pe; card.style.pointerEvents = pe; }
       raf = requestAnimationFrame(tick);
     })();
     // the ruler ignores you while you resize a card, and while you're over (or within 24px of) the open pile's cards,
@@ -249,20 +320,54 @@
     addEventListener('pointermove', e => { if (guard && nearPile(e.clientX, e.clientY)) guard = 0; });
     const tripping = e => { if (!guard) return false; if (performance.now() > guard) { guard = 0; return false; } if (gx0 == null) gx0 = e.clientX;
       if (Math.abs(e.clientX - gx0) > 220) { guard = 0; return false; } return true; };
-    svg.addEventListener('pointermove', e => { if (tripping(e)) { mx = null; return; } if (resizing || (S.o > .5 && nearPile(e.clientX, e.clientY))) { mx = null; return; } mx = lastMx = e.clientX - svg.getBoundingClientRect().left; });
-    svg.addEventListener('pointerleave', () => { mx = null; });
-    svg.addEventListener('click', () => { if (active && open && cur && cur._arm) cur._arm(); });
+    svg.addEventListener('pointermove', e => { if (e.pointerType !== 'mouse') { if (touching) mx = lastMx = e.clientX - svg.getBoundingClientRect().left; return; } // a finger keeps the ruler till it lifts
+      if (tripping(e)) { mx = null; return; } if (resizing || (S.o > .5 && nearPile(e.clientX, e.clientY))) { mx = null; return; } mx = lastMx = e.clientX - svg.getBoundingClientRect().left; });
+    svg.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') mx = null; });
+    // on a touchscreen there's no hover: a finger on the ruler picks the nearest piece, sliding along it scrubs through
+    // them under a stronger loupe, and lifting keeps the one you're on. Then the pile is brought into view if it's
+    // below the bottom of the screen.
+    svg.addEventListener('pointerdown', e => { if (e.pointerType === 'mouse') return; touching = true; guard = 0;
+      mx = lastMx = e.clientX - svg.getBoundingClientRect().left; });
+    const lift = e => { if (e.pointerType === 'mouse' || !touching) return; touching = false;
+      requestAnimationFrame(() => requestAnimationFrame(() => { mx = null; if (e.type === 'pointerup') setTimeout(reveal, 320); })); };
+    svg.addEventListener('pointerup', lift); svg.addEventListener('pointercancel', lift);
+    // a click on the ruler opens the piece you're on (with a mouse); a tap only picks it
+    svg.addEventListener('click', () => { if (Site.touchy()) return; if (active && open && cur && cur._arm) cur._arm(); });
+    // scroll just enough to show the whole pile under the ruler, never pushing the ruler itself off the top
+    function reveal() { if (!cur || !open) return; const rs = [...cur.querySelectorAll('.pile > .pi')].map(o => o.getBoundingClientRect()).filter(q => q.width); if (!rs.length) return;
+      const top = svg.getBoundingClientRect().top, over = Math.max(...rs.map(q => q.bottom)) + 16 - innerHeight; if (over <= 0) return;
+      scrollBy({ top: Math.max(0, Math.min(over, top - 8)), behavior: 'smooth' }); }
+    // bring a pile into view: with the ruler above it if both fit the screen, otherwise just the cards
+    Site.rcReveal = () => { if (!cur) return; const rs = [...cur.querySelectorAll('.pile > .pi')].map(o => o.getBoundingClientRect()).filter(q => q.width); if (!rs.length) return;
+      const ct = Math.min(...rs.map(q => q.top)), b = Math.max(...rs.map(q => q.bottom)), rt = Math.min(svg.getBoundingClientRect().top, ct);
+      const t = b - rt + 32 < innerHeight ? rt : ct;
+      scrollBy({ top: b - t + 24 < innerHeight ? (t + b) / 2 - innerHeight / 2 : t - 12, behavior: 'smooth' }); };
+    // with no hover to show what the ruler does, a touchscreen opens the newest piece the first time the ruler comes into view
+    if (matchMedia('(hover: none)').matches && 'IntersectionObserver' in window) {
+      const io = new IntersectionObserver(es => { if (!es.some(x => x.isIntersecting)) return; io.disconnect(); if (cur || open) return;
+        const p = POSTS[POSTS.length - 1]; active = p; show(p, 0); open = true; }, { threshold: .9 });
+      io.observe(svg);
+    }
     // a click off the pile (anywhere that isn't a card, its open-card or the ruler) fades it away and returns to the
     // page as it first loaded: no pile, no piece picked
-    document.addEventListener('pointerdown', e => {
-      if (!cur || !open) return; if (e.target.closest && e.target.closest('.pi, .rc-go .g-hit, .rc-go .g-disc, .tl-axis, .rc-hd, .dev')) return;
+    const offTap = (e, finger) => {
+      if (!cur || !open) return; if (e.target.closest && e.target.closest('.pi, .rc-go .g-hit, .rc-go .g-disc, .tl-axis, .rc-hd, .dev' + (finger ? ', .social' : ''))) return;
       // with the cursor up, a click inside its zone (64px round the cards) opens instead; any further out dismisses the
       // cursor and the pile together, in 1 click
       if (document.documentElement.classList.contains('gc-on') && [...cur.querySelectorAll('.pile .pi')].some(o => { const r = o.getBoundingClientRect(); return e.clientX > r.left - 64 && e.clientX < r.right + 64 && e.clientY > r.top - 64 && e.clientY < r.bottom + 64; })) return;
       if (cur.classList.contains('focus') && Site.clickClose) Site.clickClose(cur);
+      if (Site.plEnd) Site.plEnd();
       const gone = cur; open = false; active = null; mx = null;
       setTimeout(() => { if (cur === gone && !open) { gone.remove(); cur = null; } }, 450);
-    });
+    };
+    document.addEventListener('pointerdown', e => { if (e.pointerType === 'mouse') offTap(e); });
+    // a finger counts as a tap when it lifts without having scrolled (the browser cancels a touch it scrolls with). This
+    // doesn't wait for a click: iPhone Safari only sends one to things it thinks are clickable, never to blank page.
+    let tapDown = null;
+    addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse') tapDown = { id: e.pointerId, x: e.clientX, y: e.clientY }; }, true);
+    addEventListener('pointercancel', e => { if (tapDown && tapDown.id === e.pointerId) tapDown = null; }, true);
+    addEventListener('pointerup', e => { const d = tapDown; if (!d || d.id !== e.pointerId) return; tapDown = null;
+      if (Math.hypot(e.clientX - d.x, e.clientY - d.y) < 10) offTap(e, true); }, true);
     // corner handles, like a transform box. Only a corner you can actually see (nothing on top of it) counts. Within
     // NEAR px of it, everything ramps together with your distance (0 at the edge of the zone, full at the corner):
     // the cursor turns to a crosshair, the purple handle fades in (tilted with the card, sitting on the rounded
@@ -281,8 +386,8 @@
         const a = -((parseFloat(o.style.getPropertyValue('--r')) || 0) + (parseFloat(o.style.rotate) || 0)) * Math.PI / 180;
         return { w: sl.offsetWidth * .6, h: sl.offsetHeight * .6, dx: (vx * Math.cos(a) - vy * Math.sin(a)) / sc, dy: (vx * Math.sin(a) + vy * Math.cos(a)) / sc, rad: 16 * .6 }; }
       const t = shapeOf(o); return { w: t.offsetWidth, h: t.offsetHeight, dx: 0, dy: 0, rad: parseFloat(getComputedStyle(t).borderTopLeftRadius) || 0 }; };
-    const geom = o => { const bx = boxOf(o), r = o.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2, sc = o._s || 1;
-      const w = bx.w * sc / 2, hh = bx.h * sc / 2, rad = bx.rad * sc, inset = Math.min(4, rad * (1 - Math.SQRT1_2) * .45); // just inside the corner: under half the way to the arc, and never more than 4px in however big the card is
+    const geom = o => { const bx = boxOf(o), r = o.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2, sc = o._s || 1, z = zOf(o);
+      const w = bx.w * sc * z / 2, hh = bx.h * sc * z / 2, rad = bx.rad * sc * z, inset = Math.min(4, rad * (1 - Math.SQRT1_2) * .45); // just inside the corner: under half the way to the arc, and never more than 4px in however big the card is
       const deg = (parseFloat(o.style.getPropertyValue('--r')) || 0) + (parseFloat(o.style.rotate) || 0), a = deg * Math.PI / 180, c = Math.cos(a), sn = Math.sin(a);
       const pt = (lx, ly) => { lx += bx.dx * sc; ly += bx.dy * sc; return [cx + c * lx - sn * ly, cy + sn * lx + c * ly]; };
       return { deg, cx, cy, corners: [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([sx, sy]) => ({ sx, sy, p: pt(sx * (w - inset), sy * (hh - inset)), probe: pt(sx * (w - inset - 7), sy * (hh - inset - 7)) })) }; };
@@ -331,7 +436,7 @@
     };
     const hideHd = () => setTargets([]);
     document.addEventListener('pointermove', e => {
-      if (resizing) return; if (!cur || cur.dragging || S.o < .6 || !cur.isConnected || cur.classList.contains('focus')) return hideHd();
+      if (resizing) return; if (e.pointerType !== 'mouse') return; if (!cur || cur.dragging || S.o < .6 || !cur.isConnected || cur.classList.contains('focus')) return hideHd();
       const list = [];
       for (const o of cur.querySelectorAll('.pile .pi:not(.filo)')) { const g = geom(o); for (const cn of g.corners) { const d = Math.hypot(e.clientX - cn.p[0], e.clientY - cn.p[1]);
         if (d < NEAR && visibleAt(o, cn.probe)) list.push({ key: keyOf(o, cn), o, g, cn, deg: g.deg, k: Math.max(0, Math.min(1, 1 - (d - 6) / (NEAR - 6))) }); } }
@@ -340,7 +445,7 @@
     // pressing resizes the strongest live corner, unless you're over a different card and not right on the corner
     // (then the press drags that card as usual)
     document.addEventListener('pointerdown', e => {
-      if (!hot || resizing) return;
+      if (!hot || resizing || e.pointerType !== 'mouse') return;
       let under = null; for (const el of document.elementsFromPoint(e.clientX, e.clientY)) { if (hd.contains(el)) continue; under = el.closest('.pi'); break; }
       if (under && under !== hot.o && hot.k < .7) return;
       e.preventDefault(); e.stopPropagation(); const { o, g, cn } = hot; resizing = true; frozen = true; hd.classList.add('grab'); paint([{ ...hot, k: 1 }]);

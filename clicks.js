@@ -51,15 +51,31 @@
   // leaving: the disc shrinks into the pointer's tip, and the real pointer comes back once the disc is about its
   // size (a drawn stand-in never quite matched the real pointer's size, so there is none)
   let gx = 0, gy = 0, gtx = 0, gty = 0, gvx = 0, gvy = 0, owner = null, graf = 0, kindNow = '', leaving = 0;
-  addEventListener('pointermove', e => { gtx = e.clientX; gty = e.clientY; if (!owner && !leaving) { gx = gtx; gy = gty; } }, true);
-  const gstep = () => { gvx += (gtx - gx) * .24; gvy += (gty - gy) * .24; gvx *= .6; gvy *= .6; gx += gvx; gy += gvy;
+  // a press counts as well as a move: on a touchscreen there's no pointer moving about, so the disc comes up where
+  // the finger tapped instead of flying in from wherever the last touch was
+  let pinned = false; // pinned to a spot (a playlist sleeve's edge on a touchscreen) instead of following
+  const follow = e => { if (pinned) return; gtx = e.clientX; gty = e.clientY; if (!owner && !leaving) { gx = gtx; gy = gty; } };
+  addEventListener('pointermove', follow, true); addEventListener('pointerdown', follow, true);
+  // the label stays on screen: it slides in from a side edge, and flips above the disc near the bottom
+  let lw = 0, lh = 0;
+  const fitLab = () => { if (!lw) return; const half = lw / 2, m = 8; let sh = 0;
+    if (gx - half < m) sh = m - (gx - half); else if (gx + half > innerWidth - m) sh = innerWidth - m - (gx + half);
+    const up = gy + 38 + lh > innerHeight - m; glab.style.setProperty('--lx', sh.toFixed(1) + 'px'); glab.classList.toggle('up', up);
+    gc.classList.toggle('pin-up', pinned && up); }; // a pinned disc's label would sit over the sleeve's words: it's left off (the sleeve shows its title)
+  const gstep = () => { gvx += (gtx - gx) * .24; gvy += (gty - gy) * .24; gvx *= .6; gvy *= .6; gx += gvx; gy += gvy; fitLab();
     gc.style.transform = `translate(${gx.toFixed(1)}px, ${gy.toFixed(1)}px)`; gc.style.setProperty('--tilt', Math.max(-12, Math.min(12, gvx)).toFixed(1) + 'deg');
     graf = owner || leaving || Math.abs(gvx) + Math.abs(gvy) > .05 || Math.abs(gtx - gx) + Math.abs(gty - gy) > .5 ? requestAnimationFrame(gstep) : 0; };
   // kinds: arrow (open the piece), loom (a Loom clip: purple play), spotify (a playlist: green play)
   const root = document.documentElement;
-  Site.gc = { show(who, kind, html) { owner = who; if (leaving) { clearTimeout(leaving); leaving = 0; root.classList.remove('gc-leave'); } if (kind !== kindNow) { kindNow = kind; gc.dataset.kind = kind; disc.innerHTML = kind === 'arrow' ? ARROW : PLAY; }
-      if (glab.innerHTML !== html) glab.innerHTML = html; gc.classList.add('on'); root.classList.add('gc-on'); if (!graf) graf = requestAnimationFrame(gstep); },
-    hide(who) { if (who && owner !== who) return; const was = gc.classList.contains('on'); owner = null; gc.classList.remove('on'); root.classList.remove('gc-on');
+  // (a different owner's disc is never left pinned)
+  Site.gc = { show(who, kind, html) { if (who !== owner) pinned = false; owner = who; if (leaving) { clearTimeout(leaving); leaving = 0; root.classList.remove('gc-leave'); } if (kind !== kindNow) { kindNow = kind; gc.dataset.kind = kind; disc.innerHTML = kind === 'arrow' ? ARROW : PLAY; }
+      if (glab.innerHTML !== html || !lw) { glab.innerHTML = html; lw = glab.offsetWidth; lh = glab.offsetHeight; } fitLab(); gc.classList.add('on'); root.classList.add('gc-on'); if (!graf) graf = requestAnimationFrame(gstep); },
+    // glide to a fixed spot and stay there until hidden (on a touchscreen there's no pointer for it to follow)
+    pin(x, y) { pinned = true; gtx = x; gty = y; fitLab(); if (!graf) graf = requestAnimationFrame(gstep); },
+    // is this point on the disc (it lets taps through, so a tap on it lands on whatever is underneath)
+    hit(x, y) { return pinned && gc.classList.contains('on') && Math.hypot(x - gx, y - gy) < 32; },
+    pinned() { return pinned; }, // only a pinned disc (with a mouse it's always under the pointer)
+    hide(who) { if (who && owner !== who) return; pinned = false; gc.classList.remove('pin-up'); const was = gc.classList.contains('on'); owner = null; gc.classList.remove('on'); root.classList.remove('gc-on');
       if (!was) return; root.classList.add('gc-leave'); clearTimeout(leaving); // the pointer stays hidden until the disc is down to about its size
       leaving = setTimeout(() => { leaving = 0; root.classList.remove('gc-leave'); }, 190); if (!graf) graf = requestAnimationFrame(gstep); } };
   const state = new WeakMap();

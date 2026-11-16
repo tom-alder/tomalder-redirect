@@ -87,12 +87,14 @@ a { color: inherit; text-decoration: none; }
 .rc-pane.out { opacity: 0; transform: translateX(var(--dx, 0)); filter: blur(3px); transition-duration: .2s, .3s, .2s; pointer-events: none; }
 .pile { position: relative; width: 380px; height: 310px; }
 .pi { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%) translate(var(--x), var(--y)) rotate(var(--r)) scale(var(--s, 1)); cursor: grab; user-select: none; -webkit-user-select: none; -webkit-user-drag: none;
-  touch-action: pan-y; -webkit-touch-callout: none; } /* on a touchscreen an up-down swipe on a card still scrolls the page; a sideways drag moves the card */
+  touch-action: pan-y; -webkit-touch-callout: none; } /* on a touchscreen an up-down swipe on a card still scrolls the page; a sideways drag moves the card; a finger held on it first picks it up */
 .pi.drag { cursor: grabbing; } /* keeps its own layer while dragged */
 .pi.home { transition: translate .62s cubic-bezier(.34, 1.56, .64, 1), rotate .62s cubic-bezier(.34, 1.56, .64, 1); }
 .pi.media { border-radius: 5px; --lift: 0 1px 2px rgba(30, 18, 6, .1), 0 5px 12px -4px rgba(30, 18, 6, .2), 0 20px 36px -14px rgba(30, 18, 6, .55); box-shadow: var(--lift); }
 .pi.media img, .pi.media video { display: block; max-width: 270px; max-height: 200px; width: auto; height: auto; border-radius: 5px; pointer-events: none; }
 .pi.drag.media, .pi.drag.doc, .pi.drag.job { box-shadow: 0 2px 3px rgba(30, 18, 6, .1), 0 10px 20px -6px rgba(30, 18, 6, .22), 0 30px 48px -16px rgba(30, 18, 6, .55); }
+/* picked up by a finger held on it: a deeper, softer shadow, as if it's off the desk */
+.pi.lift.media, .pi.lift.doc, .pi.lift.job, .pi.lift.cover { box-shadow: 0 4px 6px rgba(30, 18, 6, .12), 0 16px 28px -8px rgba(30, 18, 6, .28), 0 38px 60px -18px rgba(30, 18, 6, .6); }
 .pi-play { position: absolute; left: 50%; top: 50%; width: 36px; height: 36px; margin: -18px 0 0 -18px; border-radius: 50%; display: grid; place-items: center;
   background: linear-gradient(180deg, #6f6af8 0%, #5a55f0 100%);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22), inset 0 -1px 0 rgba(20, 14, 90, .18), 0 0 0 1px rgba(255, 255, 255, .28), 0 4px 12px -2px rgba(40, 30, 140, .35);

@@ -6,9 +6,50 @@
 // while it's still on the pile and it springs back to where it was. A plain click opens the piece.
 // Moving to another tick swaps the pile in from the way you're moving. The pile is anchored to the tick's own
 // place on the ruler, so the loupe never drags it sideways.
+// On a touchscreen a sideways drag moves a card straight away, an up-down swipe scrolls the page, and a finger held on
+// a card for a moment picks it up, after which it follows the finger any way it goes.
 (function () {
   const { WRITING, esc, fmtDate } = Site;
   const POSTS = [...WRITING].sort((a, b) => a.date < b.date ? -1 : 1).map((p, i) => ({ ...p, i, ts: Date.parse(p.date) }));
+  // ---------- every pile's pictures and clips, fetched before anyone asks for them ----------
+  // Once the page has loaded and gone quiet, the piles' pictures (and each clip's first frame) download in the
+  // background: the newest piece's first, then the playlists', then the rest, newest to oldest. So hovering a date shows
+  // its pile complete at once instead of filling in. On a computer the clips follow, 1 at a time, each into a hidden
+  // player of its own; when its pile appears, that same player goes into the card, already loaded, and starts at once
+  // (about 3x faster than streaming it, in Chrome and Safari alike, and nothing downloads twice; a plain download into the
+  // browser's cache doesn't do it, because Safari's video player ignores that cache and downloads again). A phone or tablet skips
+  // the clips to spare a data plan (it already has each clip's first frame, and the clip plays as it streams), and a
+  // connection that asks to save data, or is slow, skips the lot.
+  const media = (() => {
+    const piles = [], kept = [], players = new Map(); let started = false;
+    const net = navigator.connection || {}, thin = !!net.saveData || /2g|3g/.test(net.effectiveType || '');
+    const roomy = !matchMedia('(hover: none)').matches; // a mouse: a computer, with the memory for decoded pictures and loaded clips
+    const urlsOf = pile => { const out = []; for (const it of pile) { if (it.img) out.push(it.img); if (it.video) out.push(it.video.replace(/\.mp4$/, '-poster.jpg'), it.video);
+      if (it.html) for (const m of it.html.matchAll(/src="([^"]+)"/g)) out.push(m[1]); } return out; };
+    // a picture is kept (so the browser holds it ready) and, on a computer, decoded too, so it draws the instant it's shown
+    const pic = u => new Promise(done => { const im = new Image(); im.decoding = 'async'; im.fetchPriority = 'low';
+      im.onload = () => { kept.push(im); if (roomy && im.decode) im.decode().then(done, done); else done(); }; im.onerror = done; im.src = u; });
+    // a clip's hidden player is handed out as soon as it exists: half-loaded still beats starting from nothing
+    const clip = u => new Promise(done => { const v = document.createElement('video');
+      v.muted = v.loop = v.playsInline = true; v.preload = 'auto'; v.setAttribute('muted', ''); v.setAttribute('playsinline', ''); v.poster = u.replace(/\.mp4$/, '-poster.jpg');
+      let t = 0; const fin = () => { clearTimeout(t); v.removeEventListener('canplaythrough', fin); v.removeEventListener('error', fin); done(); };
+      v.addEventListener('canplaythrough', fin); v.addEventListener('error', fin); t = setTimeout(fin, 20000); players.set(u, v); v.src = u; });
+    function start() { if (started || thin) return; started = true;
+      const all = [...new Set(piles.sort((a, b) => a.rank - b.rank).flatMap(p => urlsOf(p.pile)))];
+      const pics = all.filter(u => !/\.mp4$/.test(u)), clips = roomy ? all.filter(u => /\.mp4$/.test(u)) : [];
+      let busy = 0; // 4 pictures at a time; the clips 1 at a time once the pictures are in
+      const pump = () => { while (busy < 4 && pics.length) { busy++; pic(pics.shift()).then(() => { busy--; pump(); }); }
+        if (!busy && clips.length) { busy++; clip(clips.shift()).then(() => { busy--; pump(); }); } };
+      pump(); }
+    const later = () => (window.requestIdleCallback ? requestIdleCallback(start, { timeout: 2000 }) : setTimeout(start, 600));
+    if (document.readyState === 'complete') later(); else addEventListener('load', later, { once: true });
+    return { pile: (rank, pile) => piles.push({ rank, pile }),
+      // the clip's hidden player, unless it's already in use (still in a pile that's fading out) or failed to load
+      take: u => { const v = players.get(u); return v && !v.isConnected && !v.error ? v : null; },
+      state: () => ({ started, thin, roomy, pics: kept.length, clips: players.size, loaded: [...players.values()].filter(v => v.readyState >= 4).length }) };
+  })();
+  POSTS.slice().reverse().forEach((p, i) => media.pile(i ? i + 1 : 0, p.pile)); // the newest first; the playlists (playlists.js) take rank 1
+  Site.media = media;
   const T0 = Date.parse('2024-01-01'), T1 = Date.parse('2026-11-15'), span = T1 - T0, tpos = ts => (ts - T0) / span;
   const NS = 'http://www.w3.org/2000/svg';
   const h = html => { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstElementChild; };
@@ -72,7 +113,7 @@
   function item(it, x, y, r, extra = '') {
     let inner;
     if (it.img) inner = `<img src="${it.img}" alt="" draggable="false">`;
-    else if (it.video) inner = `<video src="${it.video}" poster="${it.video.replace(/\.mp4$/, '-poster.jpg')}" muted loop playsinline autoplay preload="auto"></video>${it.play ? `<span class="pi-play"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z"/></svg></span>` : ''}`;
+    else if (it.video) inner = `<video data-src="${it.video}" poster="${it.video.replace(/\.mp4$/, '-poster.jpg')}" muted loop playsinline autoplay preload="auto"></video>${it.play ? `<span class="pi-play"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z"/></svg></span>` : ''}`;
     else if (it.sticker) inner = `<span class="pi-tile">${STICKER[it.sticker]}</span>`;
     else if (it.doc) inner = `<span class="pi-doc-bar"><i></i><i></i><i></i></span><span class="pi-doc-t">${esc(it.doc)}</span><span class="pi-doc-img"></span><span class="pi-doc-l" style="width:88%"></span><span class="pi-doc-l" style="width:70%"></span><span class="pi-doc-l" style="width:80%"></span>`;
     else if (it.html) inner = it.html; // add-on piles (playlists.js) bring their own card markup
@@ -151,13 +192,25 @@
       const sc = Math.max(.6, Math.min(3, P.s0 * p.d / P.d)); el._s = sc; el.style.setProperty('--s', sc.toFixed(3));
       let da = (p.ang - P.ang) * 180 / Math.PI; da = ((da + 540) % 360) - 180; el.style.setProperty('--r', (P.r0 + da).toFixed(2) + 'deg');
       place(el, P.x0 + (p.mx - P.mx) / z, P.y0 + (p.my - P.my) / z); };
+    // a finger resting on a card for a moment (HOLD ms) picks it up: it grows a little, as if lifted off the desk, and
+    // then follows the finger any way it goes, up and down included, while the page holds still. Without the pause, an
+    // up-down swipe scrolls the page and a sideways one drags the card straight away, as before.
+    const HOLD = 300; // long enough that resting a finger on a card before scrolling rarely picks it up
+    // the page only holds still if each finger move is cancelled, which a passive listener can't do, so the pile
+    // listens to them itself, and cancels them while a card is picked up or pinched
+    pile.addEventListener('touchmove', e => { if (pile._lock && e.cancelable) e.preventDefault(); }, { passive: false });
+    // a long press never brings up the browser's own menu (Android's image menu, for one)
+    pile.addEventListener('contextmenu', e => { if (Site.touchy()) e.preventDefault(); });
+    const lift = (el, v) => { const a = parseFloat(getComputedStyle(el).getPropertyValue('--lf')) || 1; if (el._lfa) el._lfa.cancel();
+      const an = el._lfa = el.animate([{ '--lf': a }, { '--lf': v }], { duration: v > 1 ? 170 : 260, easing: 'cubic-bezier(.2, .9, .3, 1)', fill: 'forwards' });
+      if (v === 1) an.onfinish = () => { if (el._lfa === an) { an.cancel(); el._lfa = null; } }; };
     pile.addEventListener('pointerdown', e => {
       const el = e.target.closest('.pi'); if (!el) return;
       const held = el._g;
       if (held) { // another finger on a card that's already held
         if (e.pointerType === 'mouse' || held.pts.size >= 2) return;
         try { el.setPointerCapture(e.pointerId); } catch (er) {}
-        held.pts.set(e.pointerId, [e.clientX, e.clientY]); held.pinch = pinchStart(el, held); held.moved = true; return; }
+        held.pts.set(e.pointerId, [e.clientX, e.clientY]); held.pinch = pinchStart(el, held); held.moved = true; clearTimeout(held.ht); pile._lock = true; return; }
       // with a mouse, cancelling the press stops text selection and the browser's own image drag; a touch is left
       // alone, because Safari then drops the click that a tap opens from
       if (e.pointerType === 'mouse') e.preventDefault();
@@ -166,18 +219,25 @@
       const er = el.getBoundingClientRect(), hits = (q) => q.left < er.right && q.right > er.left && q.top < er.bottom && q.bottom > er.top;
       const shownOnTop = el.classList.contains('sticker') || ![...pile.querySelectorAll(":scope > .pi")].some(o => o !== el && !o.classList.contains('sticker') && +o.style.zIndex > +el.style.zIndex && hits(o.getBoundingClientRect()));
       const z = zOf(pile), first = e.pointerId, sx = e.clientX, sy = e.clientY, ox = el._x || 0, oy = el._y || 0; let dx = 0, dy = 0;
-      const g = el._g = { pts: new Map([[first, [sx, sy]]]), pinch: null, moved: false, touch: e.pointerType !== 'mouse' };
+      const g = el._g = { pts: new Map([[first, [sx, sy]]]), pinch: null, moved: false, touch: e.pointerType !== 'mouse', held: false, far: 0, ht: 0 };
       try { el.setPointerCapture(first); } catch (er2) {} el.classList.add('drag'); pane.dragging = true;
+      // still there after HOLD, and it hasn't wandered (a finger never rests perfectly still): pick it up, with a tiny
+      // buzz where the phone can (Android; iPhones don't let a page do it)
+      if (g.touch) g.ht = setTimeout(() => { if (el._g !== g || g.moved || g.pinch || g.far > 10) return;
+        g.held = true; pile._lock = true; el.classList.add('lift'); lift(el, 1.06);
+        try { if (navigator.vibrate && navigator.userActivation && navigator.userActivation.hasBeenActive) navigator.vibrate(8); } catch (er3) {} }, HOLD);
       const move = ev => { if (!g.pts.has(ev.pointerId)) return; g.pts.set(ev.pointerId, [ev.clientX, ev.clientY]);
         if (g.pinch) { if (g.pts.size === 2) pinchMove(el, g); return; }
         if (ev.pointerId !== first) return;
-        dx = (ev.clientX - sx) / z; dy = (ev.clientY - sy) / z; const far = Math.hypot(dx, dy) * z;
+        dx = (ev.clientX - sx) / z; dy = (ev.clientY - sy) / z; const far = Math.hypot(dx, dy) * z; g.far = Math.max(g.far, far);
         // a finger that heads up or down is probably scrolling the page: the card waits (the browser takes the touch
-        // over within a few pixels) and only follows if it's still a drag after 24px, so a scroll never nudges a card
-        if (g.touch && !g.moved && (far < 8 || (Math.abs(dy) > Math.abs(dx) * 1.2 && far < 24))) return;
+        // over within a few pixels) and only follows if it's still a drag after 24px, so a scroll never nudges a card.
+        // A card that's been picked up just follows.
+        if (g.touch && !g.moved && !g.held && (far < 8 || (Math.abs(dy) > Math.abs(dx) * 1.2 && far < 24))) return;
         if (far > 4) g.moved = true;
         place(el, ox + dx, oy + dy); el.style.rotate = `${Math.max(-10, Math.min(10, dx * .04))}deg`; };
-      const end = () => { el.style.transition = ''; // hand transitions back to the stylesheet (the drag set its own)
+      const end = () => { clearTimeout(g.ht); if (g.held || g.pinch) pile._lock = false; if (g.held) { el.classList.remove('lift'); lift(el, 1); } // put down
+        el.style.transition = ''; // hand transitions back to the stylesheet (the drag set its own)
         el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', up);
         el.classList.remove('drag', 'pinch'); el._g = null; pane.dragging = false; pane.heldUntil = performance.now() + 1100; };
       const up = ev => {
@@ -241,6 +301,9 @@
       if (Site.plEnd) Site.plEnd(); // and so does an open playlist sleeve, with its green disc
       if (cur) { const old = cur; old.classList.remove('in'); old.classList.add('out'); old.style.setProperty('--dx', (-dir * 18) + 'px'); old.querySelectorAll('video').forEach(v => v.pause()); setTimeout(() => old.remove(), 240); }
       const n = h(pane(p)); n.dataset.key = p.title; n.style.setProperty('--dx', (dir * 18) + 'px'); clip.append(n); cur = n;
+      // each clip: the hidden player that's been loading it in the background (it starts at once), or, if that's busy or
+      // there isn't one (a phone), a new player that streams it
+      n.querySelectorAll('video[data-src]').forEach(v => { const ready = media.take(v.dataset.src); if (ready) v.replaceWith(ready); else v.src = v.dataset.src; });
       n.querySelectorAll('video').forEach(v => { v.currentTime = 0; v.play().catch(() => {}); });
       // a first click never leaves the page: it lights up the link and offers to open it. A second click on the
       // pile, or a click on the link itself, goes there. The offer fades after 5s or when you click away.
@@ -258,7 +321,8 @@
         const pb = pile.getBoundingClientRect().bottom, low = Math.max(...items.map(o => o.getBoundingClientRect().bottom)); if (!isFinite(low)) return;
         cap.style.marginTop = Math.max(-200, Math.round((low - pb) / zOf(pile) + 22)) + 'px'; };
       const settle = () => { unbury(n); placeStickers(n); gapUnder(); fitPane(n); }; // after makeDraggable, so the stacking order is set
-      settle(); n.querySelectorAll('img, video').forEach(m => m.addEventListener(m.tagName === 'IMG' ? 'load' : 'loadedmetadata', settle, { once: true }));
+      // and again as anything still loading gets its size (a preloaded picture or clip already has it)
+      settle(); n.querySelectorAll('img, video').forEach(m => { if (m.tagName === 'IMG' ? m.complete : m.readyState >= 1) return; m.addEventListener(m.tagName === 'IMG' ? 'load' : 'loadedmetadata', settle, { once: true }); });
       requestAnimationFrame(() => requestAnimationFrame(() => n.classList.add('in')));
     }
     // a pile wider than the screen (a phone) shrinks as a whole until its cards fit with 12px to spare each side; a

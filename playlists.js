@@ -105,6 +105,9 @@
       } };
   }
 
+  // the covers, the desk photo and its clip download in the background with the rest (timelines.js), right after the
+  // newest piece's: the Spotify icon is near the top, so it's often the first thing hovered
+  if (Site.media) Site.media.pile(1, post().pile);
   let on = false;
   Site.setSpotifyMode = v => { on = !!v; document.documentElement.dataset.spotify = on ? 'on' : 'off'; };
   // hovering the Spotify icon (once per visit to it) brings up the playlists, like hovering a piece on the ruler

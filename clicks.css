@@ -4,7 +4,8 @@
 @property --fy { syntax: '<length>'; inherits: false; initial-value: 0px; }
 @property --ry { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
 @property --ls { syntax: '<number>'; inherits: false; initial-value: 1; }
-.pi { transform: translate(-50%, -50%) translate(var(--x), var(--y)) translate(var(--fx), var(--fy)) perspective(1400px) rotate(var(--r)) rotateY(var(--ry)) scale(calc(var(--s, 1) * var(--ls)));
+@property --lf { syntax: '<number>'; inherits: false; initial-value: 1; } /* a card picked up by a finger held on it (timelines.js) */
+.pi { transform: translate(-50%, -50%) translate(var(--x), var(--y)) translate(var(--fx), var(--fy)) perspective(1400px) rotate(var(--r)) rotateY(var(--ry)) scale(calc(var(--s, 1) * var(--ls) * var(--lf, 1)));
   transition: outline-offset .3s, outline-color .3s, filter .45s, opacity .4s, --hp 0s,
     --fx .7s cubic-bezier(.2, .9, .2, 1), --fy .7s cubic-bezier(.2, .9, .2, 1), --ry .26s cubic-bezier(.6, 0, .9, .5), --ls .5s cubic-bezier(.2, .9, .2, 1); }
 [data-cap] .rc-cap { display: none; }

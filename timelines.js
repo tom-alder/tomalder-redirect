@@ -436,7 +436,9 @@
     };
     const hideHd = () => setTargets([]);
     document.addEventListener('pointermove', e => {
-      if (resizing) return; if (e.pointerType !== 'mouse') return; if (!cur || cur.dragging || S.o < .6 || !cur.isConnected || cur.classList.contains('focus')) return hideHd();
+      // no handles for a finger, nor for the "mouse" moves a touchscreen browser echoes (just after a touch, or when the
+      // page scrolls under where the last tap was): on a touch-first device only a mouse that really moved counts
+      if (resizing) return; if (e.pointerType !== 'mouse' || Site.touchy() || (coarse && !e.movementX && !e.movementY)) return hideHd(); if (!cur || cur.dragging || S.o < .6 || !cur.isConnected || cur.classList.contains('focus')) return hideHd();
       const list = [];
       for (const o of cur.querySelectorAll('.pile .pi:not(.filo)')) { const g = geom(o); for (const cn of g.corners) { const d = Math.hypot(e.clientX - cn.p[0], e.clientY - cn.p[1]);
         if (d < NEAR && visibleAt(o, cn.probe)) list.push({ key: keyOf(o, cn), o, g, cn, deg: g.deg, k: Math.max(0, Math.min(1, 1 - (d - 6) / (NEAR - 6))) }); } }
@@ -445,7 +447,7 @@
     // pressing resizes the strongest live corner, unless you're over a different card and not right on the corner
     // (then the press drags that card as usual)
     document.addEventListener('pointerdown', e => {
-      if (!hot || resizing || e.pointerType !== 'mouse') return;
+      if (!hot || resizing || e.pointerType !== 'mouse' || Site.touchy()) return;
       let under = null; for (const el of document.elementsFromPoint(e.clientX, e.clientY)) { if (hd.contains(el)) continue; under = el.closest('.pi'); break; }
       if (under && under !== hot.o && hot.k < .7) return;
       e.preventDefault(); e.stopPropagation(); const { o, g, cn } = hot; resizing = true; frozen = true; hd.classList.add('grab'); paint([{ ...hot, k: 1 }]);

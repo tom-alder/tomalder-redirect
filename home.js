@@ -173,7 +173,7 @@
   function renderBio() {
     marks.forEach(m => m.destroy()); marks = [];
     const chip = c => `<a class="il" data-c="${c}" href="${P[c].url}" target="_blank" rel="noopener"><span class="ic"></span><span class="t">${P[c].name}</span></a>`;
-    const SPONSOR = 'https://sponsor.strategybreakdowns.com/?utm_source=sb_tomalder&utm_medium=website&utm_campaign=homepage&utm_content=sponsorships';
+    const SPONSOR = Site.utm('https://sponsor.strategybreakdowns.com/', 'bio', 'sponsorships');
     const paras = COPY[opt.copy].paras, inline = paras.some(p => p.includes('{work}')); // copy with its own "work with us" link drops the separate media-kit line
     $('.bio').innerHTML = paras.map(p => `<p>${p.replace(/\{(sb|daily|qc)\}/g, (_, c) => chip(c)).replace('{work}', `<a class="work" href="${SPONSOR}" target="_blank" rel="noopener"><span class="t">work with us</span></a>`)}</p>`).join('')
       + (inline ? '' : `<p class="cta">Selling to founders? <a href="${SPONSOR}" target="_blank" rel="noopener"><span class="t">Here's the media kit</span><i>↗</i></a></p>`);

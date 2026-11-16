@@ -6,39 +6,43 @@
   const MOTION = {}; for (const k in LM.B) for (const m of LM.B[k]) MOTION[m.id] = m;
 
   // ---------- content ----------
-  const utm = (url, content) => `${url}${url.includes('?') ? '&' : '?'}utm_source=sb_tomalder&utm_medium=website&utm_content=${content}`;
+  // every link to one of our own sites carries our UTMs (context/utm-scheme.md): the source is this site (sb_tomalder),
+  // the campaign is where on the page the link sits (bio, timeline), the content is which link it is. Links to other
+  // people's sites (X, LinkedIn, YouTube, GitHub, Spotify, Loom, Notion) carry none: none of them shows us UTMs.
+  const utm = (url, campaign, content) => `${url}${url.includes('?') ? '&' : '?'}utm_source=sb_tomalder&utm_medium=web&utm_campaign=${campaign}&utm_content=${content}`;
   const PROJECTS = [
     { id: 'sb', char: 'sb', name: 'Strategy Breakdowns', kind: 'Weekly newsletter', short: 'The playbooks behind the world\'s greatest companies.',
       long: 'A weekly 3-minute email on the playbooks and growth hacks behind the world\'s greatest software, internet and media companies.',
-      stat: '150,000+ readers', url: utm('https://strategybreakdowns.com', 'strategy_breakdowns'), host: 'strategybreakdowns.com' },
+      stat: '150,000+ readers', url: utm('https://strategybreakdowns.com/', 'bio', 'strategy_breakdowns'), host: 'strategybreakdowns.com' },
     { id: 'daily', char: 'daily', name: 'Strategy Screenshots', kind: 'Daily newsletter', short: '1 chart, 1 big idea, 1 poll, 1-minute read.',
       long: 'The daily, bite-size version of Strategy Breakdowns. 1 chart, 1 big idea, 1 poll, 1-minute read.',
-      stat: 'New, since Oct 2026', url: utm('https://strategybreakdowns.com', 'strategy_screenshots'), host: 'strategybreakdowns.com' },
+      stat: 'New, since Oct 2026', url: utm('https://strategybreakdowns.com/', 'bio', 'strategy_screenshots'), host: 'strategybreakdowns.com' },
     { id: 'qc', char: 'qc', name: 'quicker.chat', kind: 'Mac app', short: 'One inbox for all your DMs.',
       long: 'A Mac app that brings iMessage, WhatsApp, LinkedIn, Slack and X into one inbox, and organises it for you.',
-      stat: 'Waitlist open', url: utm('https://quicker.chat', 'quicker_chat'), host: 'quicker.chat' },
+      stat: 'Waitlist open', url: utm('https://quicker.chat/', 'bio', 'quicker_chat'), host: 'quicker.chat' },
   ];
   // pile: what the timeline shows when you hover a piece, bottom item first. Each item keeps its own shape:
   // img (a picture), video (a looping clip; play: true adds a play button), sticker (a small logo), doc (a sketch of
   // a page), job (a Notion job ad).
-  const post = (date, slug, title, pile, url) => ({ date, title, pile, sub: '', open: 50, url: url || utm(`https://strategybreakdowns.com/p/${slug}`, 'writing') });
+  // a piece's link: its post on strategybreakdowns.com, tagged with its own slug so each piece's clicks can be told apart
+  const post = (date, slug, title, pile, url) => ({ date, title, pile, sub: '', open: 50, url: url || utm(`https://strategybreakdowns.com/p/${slug}`, 'timeline', slug.replace(/-/g, '_')) });
   const job = (date, title, url, role) => ({ date, title, job: true, url, sub: 'Job ad', open: 50, pile: [{ job: role }, { sticker: 'notion' }] });
   const I = f => ({ img: 'assets/' + f }), V = (f, o) => ({ video: 'assets/' + f, ...o });
   const WRITING = [
     post('2026-10-09', '3-years-into-strategy-breakdowns', '3 years into Strategy Breakdowns', [I('3y-welcome.jpg'), I('3y-mauritius.jpg'), I('3y-hero.jpg'), I('3y-brazil.jpg'), I('3y-laptop.jpg'), I('qc-og.jpg')]),
-    { ...job('2026-06-02', 'Hiring a Partnerships Manager', utm('https://strategybreakdowns.com/p/hiring-partnerships-manager', 'writing'), 'Partnerships Manager') },
-    post('2026-04-15', 'why-i-use-beehiiv', 'Why I built my business on beehiiv', [I('bh-gauges.jpg'), I('bh-stats.jpg'), I('bh-chart.jpg'), I('bh-dash.jpg'), I('bh-growth.jpg')]),
+    { ...job('2026-06-02', 'Hiring a Partnerships Manager', utm('https://strategybreakdowns.com/p/hiring-partnerships-manager', 'timeline', 'hiring_partnerships_manager'), 'Partnerships Manager') },
+    post('2026-04-15', 'why-i-use-beehiiv', 'Why I built my business on beehiiv', [I('bh-gauges.jpg'), I('bh-stats.jpg'), I('bh-chart.jpg'), I('bh-dash.jpg'), I('bh-growth.jpg'), { sticker: 'beehiiv' }]),
     job('2026-02-19', 'Hiring a Newsletter Operations Coordinator', 'https://www.notion.so/tomalder/3f3a1965bd7780ec91c3f0f0ee7c04ae', 'Newsletter Operations Coordinator'),
     job('2026-02-11', 'Hiring a Superwriter', 'https://www.notion.so/tomalder/2eea1965bd7780a18aa4c99292f4bc95', 'Superwriter'),
     post('2026-01-21', '2-years-into-strategy-breakdowns', '2 years into Strategy Breakdowns', [I('2-years-into-strategy-breakdowns-3.jpg'), V('2y-film-1.mp4'), V('2y-film-2.mp4'), I('2-years-into-strategy-breakdowns-2.jpg'), V('2y-film-3.mp4'), V('2y-film-4.mp4'), I('2-years-into-strategy-breakdowns-1.jpg')]),
     post('2025-12-17', '2025-wrapped', '2025 Wrapped', [I('wr-5.jpg'), I('wr-4.jpg'), I('wr-3.jpg'), I('wr-2.jpg'), I('wr-1.jpg')]),
     post('2025-02-18', 'lean-creator-stack', 'The Lean Creator Stack', [I('lean-creator-stack-2.jpg'), I('lean-creator-stack-1.jpg'), V('lean-techstack.mp4')]),
-    post('2025-01-14', '1-year-full-time', '1.5 years into Strategy Breakdowns', [V('loom-b33f2631c63c49118044751cd98f2fa9.mp4', { play: true, href: 'https://www.loom.com/share/b33f2631c63c49118044751cd98f2fa9' }), V('loom-b5a957918924419b94807d5fd76e68d3.mp4', { play: true, href: 'https://www.loom.com/share/b5a957918924419b94807d5fd76e68d3' }), V('loom-1year.mp4', { play: true, href: 'https://www.loom.com/share/3646fbcf9e254d9ea83a96003fa8ba2c' }), { sticker: 'loom' }], 'https://1year.strategybreakdowns.com/'), // .loom below: a Loom piece, so the click cursor is Loom's play button
+    post('2025-01-14', '1-year-full-time', '1.5 years into Strategy Breakdowns', [V('loom-b33f2631c63c49118044751cd98f2fa9.mp4', { play: true, href: 'https://www.loom.com/share/b33f2631c63c49118044751cd98f2fa9' }), V('loom-b5a957918924419b94807d5fd76e68d3.mp4', { play: true, href: 'https://www.loom.com/share/b5a957918924419b94807d5fd76e68d3' }), V('loom-1year.mp4', { play: true, href: 'https://www.loom.com/share/3646fbcf9e254d9ea83a96003fa8ba2c' }), { sticker: 'loom' }], utm('https://1year.strategybreakdowns.com/', 'timeline', '1_year_full_time')), // .loom below: a Loom piece, so the click cursor is Loom's play button
     post('2024-08-20', 'strategy-breakdowns-2', 'Redesigning Strategy Breakdowns', [I('2-0-mindmap.jpg'), I('2-0-scope.jpg'), I('2-0-avatars.jpg'), I('2-0-58.jpg'), I('2-0-12.jpg'), I('2-0-36.jpg'), V('wordmark-2-0.mp4'), { sticker: 'notion' }, { sticker: 'figma' }], 'https://tomalder.notion.site/Strategy-Breakdowns-2-0-80fd384bdec44261bdcf54e6c5608d5f'),
     post('2024-06-18', '1-year-into-strategy-breakdowns', '1 year into Strategy Breakdowns', [I('1y-nsm.jpg'), I('1y-writegrowsell.jpg'), I('1y-message.jpg'), I('1y-cash.jpg')]),
     post('2024-01-09', '6-months-into-strategy-breakdowns', '6 months into Strategy Breakdowns', [I('6mo-sources.jpg'), I('6mo-signups.jpg'), I('6mo-revenue.jpg'), I('6mo-workflow.jpg'), V('wordmark-old-click.mp4')]),
   ];
-  WRITING.find(p => p.url === 'https://1year.strategybreakdowns.com/').loom = true;
+  WRITING.find(p => p.url.startsWith('https://1year.strategybreakdowns.com/')).loom = true;
   const ME = { name: 'Tom Alder', line: 'I write about how great companies grow, and build the tools I wish I had.',
     x: 'https://x.com/tomaldertweets', email: 'tom@strategybreakdowns.com', youtube: 'https://www.youtube.com/@Tom-Alder' };
   const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -107,5 +111,5 @@
   const h = (html) => { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstElementChild; };
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
-  root.Site = { live, PROJECTS, WRITING, ME, MOTION, Mark, lookAt, glassesCentre, fmtDate, h, esc, now, LE, LM, variants: [] };
+  root.Site = { live, utm, PROJECTS, WRITING, ME, MOTION, Mark, lookAt, glassesCentre, fmtDate, h, esc, now, LE, LM, variants: [] };
 })(window);

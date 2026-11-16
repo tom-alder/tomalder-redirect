@@ -20,6 +20,7 @@
     { id: 'lofi', title: 'Lo-Fi Radio', saves: 79, url: 'https://open.spotify.com/playlist/2VIapn8jGg2f5wqDepnedC',
       desc: 'As much as we love&nbsp;<span class="pl-sub" data-href="https://www.youtube.com/watch?v=jfKfPfyJRdk">Lofi&nbsp;Girl</span> (creative indie internet business🤘), the \'chill beats to study to\' movement does undersell the incredible instrumental hip-hop beatmakers out there.\n\nLo-Fi Radio is built around J Dilla, Nujabes, and Madlib, plus contemporary instrumentalists like FKJ and Clams Casino.' },
   ];
+  const PROFILE = 'https://open.spotify.com/user/richardalder'; // Tom's Spotify profile
   const SPOTIFY = '<svg class="pl-spotify" viewBox="0 0 168 168" aria-hidden="true"><circle cx="84" cy="84" r="84" fill="#1ED760"/><path fill="none" stroke="#0D0B22" stroke-width="13" stroke-linecap="round" d="M37 64 Q 84 49 132 64"/><path fill="none" stroke="#0D0B22" stroke-width="11" stroke-linecap="round" d="M44 88 Q 84 76 124 88"/><path fill="none" stroke="#0D0B22" stroke-width="9" stroke-linecap="round" d="M51 112 Q 84 102 117 112"/></svg>';
   // Filo with headphones, lifted from the footer
   const FILO = `<div class="pl-filo"><svg class="pl-filo-svg" viewBox="-32 0 552 360" aria-hidden="true">
@@ -76,7 +77,7 @@
       <span class="pl-back" data-href="${p.url}" role="link"><span class="pl-play" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z"/></svg></span><span class="pl-head"><span class="pl-side">Side ${i < 3 ? 'A' : 'B'}</span><span class="pl-title">${p.title}</span></span>
         <span class="pl-desc">${p.desc}</span>
         <span class="pl-foot"><span class="pl-barcode">${barcode()}</span><span class="pl-live">${SPOTIFY}<span>${p.saves} saves</span></span></span></span></span>` }));
-    return { custom: 'pl', title: 'Playlists', date: '2026-11-15', url: 'https://open.spotify.com/user/richardalder',
+    return { custom: 'pl', title: 'Playlists', date: '2026-11-15', url: PROFILE,
       // Filo is dealt onto the left half of the pile, so the notes floating up and right from his headphones always
       // land over the covers, never out over the page
       // plus the desk the playlists play at: a photo and a short clip
@@ -93,6 +94,8 @@
         const hit = onDisc || (lastDown && lastDown.closest && (lastDown.closest('.pl-sub') || lastDown.closest('.pi.cover.flip .pl-back')));
         if (hit) { window.open(hit.dataset.href, '_blank', 'noopener'); endSleeve(); return; }
         const all = [...n.querySelectorAll('.pi.cover')];
+        // the desk photo and its clip open Tom's Spotify profile
+        if (card && card.classList.contains('media')) { endSleeve(); all.forEach(c => c.classList.remove('flip')); window.open(PROFILE, '_blank', 'noopener'); return; }
         if (!card || !card.classList.contains('cover')) { endSleeve(); all.forEach(c => c.classList.remove('flip')); return; }
         if (card.classList.contains('flip')) { endSleeve(); return; }
         endSleeve(); all.forEach(c => c.classList.remove('flip'));

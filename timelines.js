@@ -6,8 +6,8 @@
 // while it's still on the pile and it springs back to where it was. A plain click opens the piece.
 // Moving to another tick swaps the pile in from the way you're moving. The pile is anchored to the tick's own
 // place on the ruler, so the loupe never drags it sideways.
-// On a touchscreen a sideways drag moves a card straight away, an up-down swipe scrolls the page, and a finger held on
-// a card for a moment picks it up, after which it follows the finger any way it goes.
+// On a touchscreen a finger on a card drags it straight away, any way it goes, while the page holds still; a swipe that
+// starts off the cards scrolls the page. 2 fingers on the pile pinch a card bigger or smaller.
 (function () {
   const { WRITING, esc, fmtDate } = Site;
   const POSTS = [...WRITING].sort((a, b) => a.date < b.date ? -1 : 1).map((p, i) => ({ ...p, i, ts: Date.parse(p.date) }));
@@ -25,7 +25,7 @@
     const net = navigator.connection || {}, thin = !!net.saveData || /2g|3g/.test(net.effectiveType || '');
     const roomy = !matchMedia('(hover: none)').matches; // a mouse: a computer, with the memory for decoded pictures and loaded clips
     const urlsOf = pile => { const out = []; for (const it of pile) { if (it.img) out.push(it.img); if (it.video) out.push(it.video.replace(/\.mp4$/, '-poster.jpg'), it.video);
-      if (it.html) for (const m of it.html.matchAll(/src="([^"]+)"/g)) out.push(m[1]); } return out; };
+      for (const m of (it.html || STICKER[it.sticker] || '').matchAll(/src="([^"]+)"/g)) out.push(m[1]); } return out; };
     // a picture is kept (so the browser holds it ready) and, on a computer, decoded too, so it draws the instant it's shown
     const pic = u => new Promise(done => { const im = new Image(); im.decoding = 'async'; im.fetchPriority = 'low';
       im.onload = () => { kept.push(im); if (roomy && im.decode) im.decode().then(done, done); else done(); }; im.onerror = done; im.src = u; });
@@ -64,7 +64,10 @@
   const NOTION = '<svg viewBox="0 0 24 24"><path fill="#000" d="M4.459 4.208c.746.606 1.026.56 2.428.466l13.215-.793c.28 0 .047-.28-.046-.326L17.86 1.968c-.42-.326-.981-.7-2.055-.607L3.01 2.295c-.466.046-.56.28-.374.466zm.793 3.08v13.904c0 .747.373 1.027 1.214.98l14.523-.84c.841-.046.935-.56.935-1.167V6.354c0-.606-.233-.933-.748-.887l-15.177.887c-.56.047-.747.327-.747.933zm14.337.745c.093.42 0 .84-.42.888l-.7.14v10.264c-.608.327-1.168.514-1.635.514-.748 0-.935-.234-1.495-.933l-4.577-7.186v6.952L12.21 19s0 .84-1.168.84l-3.222.186c-.093-.186 0-.653.327-.746l.84-.233V9.854L7.822 9.76c-.094-.42.14-1.026.793-1.073l3.456-.233 4.764 7.279v-6.44l-1.215-.139c-.093-.514.28-.887.747-.933zM1.936 1.035l13.31-.98c1.634-.14 2.055-.047 3.082.7l4.249 2.986c.7.513.934.653.934 1.213v16.378c0 1.026-.373 1.634-1.68 1.726l-15.458.934c-.98.047-1.448-.093-1.962-.747l-3.129-4.06c-.56-.747-.86-1.307-.86-1.96V2.667c0-.839.374-1.54 1.447-1.632z"/></svg>';
   const FIGMA = '<svg viewBox="0 0 38 57"><path fill="#1ABCFE" d="M19 28.5a9.5 9.5 0 1 1 19 0 9.5 9.5 0 0 1-19 0z"/><path fill="#0ACF83" d="M0 47.5A9.5 9.5 0 0 1 9.5 38H19v9.5a9.5 9.5 0 1 1-19 0z"/><path fill="#FF7262" d="M19 0v19h9.5a9.5 9.5 0 1 0 0-19H19z"/><path fill="#F24E1E" d="M0 9.5A9.5 9.5 0 0 0 9.5 19H19V0H9.5A9.5 9.5 0 0 0 0 9.5z"/><path fill="#A259FF" d="M0 28.5A9.5 9.5 0 0 0 9.5 38H19V19H9.5A9.5 9.5 0 0 0 0 28.5z"/></svg>';
   const LOOM = '<svg viewBox="0 0 24 24"><path fill="#625DF5" d="M24 10.665h-7.018l6.078-3.509-1.335-2.312-6.078 3.509 3.508-6.077L16.843.94l-3.508 6.077V0h-2.67v7.018L7.156.94 4.844 2.275l3.509 6.077-6.078-3.508L.94 7.156l6.078 3.509H0v2.67h7.017L.94 16.844l1.335 2.313 6.077-3.508-3.509 6.077 2.312 1.335 3.509-6.078V24h2.67v-7.017l3.508 6.077 2.312-1.335-3.509-6.078 6.078 3.509 1.335-2.313-6.077-3.508h7.017v-2.67H24zm-12 4.966a3.645 3.645 0 1 1 0-7.29 3.645 3.645 0 0 1 0 7.29z"/></svg>';
-  const STICKER = { notion: NOTION, figma: FIGMA, loom: LOOM };
+  // beehiiv: its own app icon (the white hive on its pink-to-blue tile, render-kit's beehiiv-stack logo), filling the tile
+  // inside the white rim, the way a die-cut sticker looks
+  const BEEHIIV = '<img class="pi-mark" src="assets/sticker-beehiiv.jpg" alt="" draggable="false">';
+  const STICKER = { notion: NOTION, figma: FIGMA, loom: LOOM, beehiiv: BEEHIIV };
 
   // where each item sits: a loose fan, bottom item first, spread wider the more items there are so you can see a
   // little of each. Stickers land in different spots on each pile (a corner, an edge, poking out), picked from the
@@ -184,7 +187,9 @@
     // page open a new tab from a click
     let tapEl = null, tapAt = 0;
     pile.addEventListener('click', () => { if (!tapEl || performance.now() - tapAt > 900) return; const t = tapEl; tapEl = null; if (t.isConnected) open(t); });
-    // 2 fingers on one card pinch it bigger or smaller and twist it, like the corner handles do with a mouse
+    // 2 fingers pinch a card bigger or smaller and twist it, like the corner handles do with a mouse. Only the first has
+    // to be on the card: the second can land anywhere on the pile (on another card, or between them), and a finger that
+    // lands between the cards first is picked up by the card the next finger touches
     const pinchGeo = g => { const [a, b] = [...g.pts.values()]; return { d: Math.max(1, Math.hypot(b[0] - a[0], b[1] - a[1])), ang: Math.atan2(b[1] - a[1], b[0] - a[0]), mx: (a[0] + b[0]) / 2, my: (a[1] + b[1]) / 2 }; };
     const pinchStart = (el, g) => { const p = pinchGeo(g); el.style.rotate = ''; el.classList.add('pinch');
       return { ...p, s0: el._s || 1, r0: parseFloat(el.style.getPropertyValue('--r')) || 0, x0: el._x || 0, y0: el._y || 0 }; };
@@ -192,25 +197,30 @@
       const sc = Math.max(.6, Math.min(3, P.s0 * p.d / P.d)); el._s = sc; el.style.setProperty('--s', sc.toFixed(3));
       let da = (p.ang - P.ang) * 180 / Math.PI; da = ((da + 540) % 360) - 180; el.style.setProperty('--r', (P.r0 + da).toFixed(2) + 'deg');
       place(el, P.x0 + (p.mx - P.mx) / z, P.y0 + (p.my - P.my) / z); };
-    // a finger resting on a card for a moment (HOLD ms) picks it up: it grows a little, as if lifted off the desk, and
-    // then follows the finger any way it goes, up and down included, while the page holds still. Without the pause, an
-    // up-down swipe scrolls the page and a sideways one drags the card straight away, as before.
-    const HOLD = 300; // long enough that resting a finger on a card before scrolling rarely picks it up
-    // the page only holds still if each finger move is cancelled, which a passive listener can't do, so the pile
-    // listens to them itself, and cancels them while a card is picked up or pinched
+    // a finger on a card drags it straight away, up and down included: the cards never let the browser scroll or zoom
+    // from them (touch-action: none, home.css), so a swipe that starts on a card always moves the card. As it starts to
+    // move it grows a little, as if lifted off the desk. A swipe that starts between the cards still scrolls the page.
+    // Belt and braces for a browser that ignores touch-action: while a card is moving or pinched the pile cancels each
+    // finger move (which a passive listener can't do), and Safari's own pinch event, so the page stays put underneath
     pile.addEventListener('touchmove', e => { if (pile._lock && e.cancelable) e.preventDefault(); }, { passive: false });
+    pile.addEventListener('gesturestart', e => { if (pile._lock && e.cancelable) e.preventDefault(); });
+    let stray = null; // a finger on the pile but between the cards, which a finger landing on a card next pinches with
+    pile.addEventListener('pointermove', e => { if (stray && stray.id === e.pointerId) stray.at = [e.clientX, e.clientY]; });
+    const unstray = e => { if (stray && stray.id === e.pointerId) stray = null; };
+    pile.addEventListener('pointerup', unstray); pile.addEventListener('pointercancel', unstray);
     // a long press never brings up the browser's own menu (Android's image menu, for one)
     pile.addEventListener('contextmenu', e => { if (Site.touchy()) e.preventDefault(); });
     const lift = (el, v) => { const a = parseFloat(getComputedStyle(el).getPropertyValue('--lf')) || 1; if (el._lfa) el._lfa.cancel();
       const an = el._lfa = el.animate([{ '--lf': a }, { '--lf': v }], { duration: v > 1 ? 170 : 260, easing: 'cubic-bezier(.2, .9, .3, 1)', fill: 'forwards' });
       if (v === 1) an.onfinish = () => { if (el._lfa === an) { an.cancel(); el._lfa = null; } }; };
+    // a second finger joins a card held by 1, and the 2 pinch it
+    const join = (g, id, at) => { try { g.el.setPointerCapture(id); } catch (er) {} g.pts.set(id, at); g.pinch = pinchStart(g.el, g); g.moved = true; pile._lock = true; };
     pile.addEventListener('pointerdown', e => {
-      const el = e.target.closest('.pi'); if (!el) return;
-      const held = el._g;
-      if (held) { // another finger on a card that's already held
-        if (e.pointerType === 'mouse' || held.pts.size >= 2) return;
-        try { el.setPointerCapture(e.pointerId); } catch (er) {}
-        held.pts.set(e.pointerId, [e.clientX, e.clientY]); held.pinch = pinchStart(el, held); held.moved = true; clearTimeout(held.ht); pile._lock = true; return; }
+      if (e.pointerType !== 'mouse') { const held = [...pile.querySelectorAll(":scope > .pi")].map(o => o._g).find(q => q && q.touch && q.pts.size === 1 && q.el.isConnected);
+        if (held) { join(held, e.pointerId, [e.clientX, e.clientY]); return; } }
+      const el = e.target.closest('.pi');
+      if (!el) { if (e.pointerType !== 'mouse') stray = { id: e.pointerId, at: [e.clientX, e.clientY] }; return; }
+      if (el._g) return; // a third finger
       // with a mouse, cancelling the press stops text selection and the browser's own image drag; a touch is left
       // alone, because Safari then drops the click that a tap opens from
       if (e.pointerType === 'mouse') e.preventDefault();
@@ -219,24 +229,19 @@
       const er = el.getBoundingClientRect(), hits = (q) => q.left < er.right && q.right > er.left && q.top < er.bottom && q.bottom > er.top;
       const shownOnTop = el.classList.contains('sticker') || ![...pile.querySelectorAll(":scope > .pi")].some(o => o !== el && !o.classList.contains('sticker') && +o.style.zIndex > +el.style.zIndex && hits(o.getBoundingClientRect()));
       const z = zOf(pile), first = e.pointerId, sx = e.clientX, sy = e.clientY, ox = el._x || 0, oy = el._y || 0; let dx = 0, dy = 0;
-      const g = el._g = { pts: new Map([[first, [sx, sy]]]), pinch: null, moved: false, touch: e.pointerType !== 'mouse', held: false, far: 0, ht: 0 };
+      const g = el._g = { el, pts: new Map([[first, [sx, sy]]]), pinch: null, moved: false, touch: e.pointerType !== 'mouse', lifted: false };
       try { el.setPointerCapture(first); } catch (er2) {} el.classList.add('drag'); pane.dragging = true;
-      // still there after HOLD, and it hasn't wandered (a finger never rests perfectly still): pick it up, with a tiny
-      // buzz where the phone can (Android; iPhones don't let a page do it)
-      if (g.touch) g.ht = setTimeout(() => { if (el._g !== g || g.moved || g.pinch || g.far > 10) return;
-        g.held = true; pile._lock = true; el.classList.add('lift'); lift(el, 1.06);
-        try { if (navigator.vibrate && navigator.userActivation && navigator.userActivation.hasBeenActive) navigator.vibrate(8); } catch (er3) {} }, HOLD);
+      if (g.touch && stray) { const s = stray; stray = null; join(g, s.id, s.at); } // the finger already down between the cards
       const move = ev => { if (!g.pts.has(ev.pointerId)) return; g.pts.set(ev.pointerId, [ev.clientX, ev.clientY]);
         if (g.pinch) { if (g.pts.size === 2) pinchMove(el, g); return; }
         if (ev.pointerId !== first) return;
-        dx = (ev.clientX - sx) / z; dy = (ev.clientY - sy) / z; const far = Math.hypot(dx, dy) * z; g.far = Math.max(g.far, far);
-        // a finger that heads up or down is probably scrolling the page: the card waits (the browser takes the touch
-        // over within a few pixels) and only follows if it's still a drag after 24px, so a scroll never nudges a card.
-        // A card that's been picked up just follows.
-        if (g.touch && !g.moved && !g.held && (far < 8 || (Math.abs(dy) > Math.abs(dx) * 1.2 && far < 24))) return;
+        dx = (ev.clientX - sx) / z; dy = (ev.clientY - sy) / z; const far = Math.hypot(dx, dy) * z;
+        // a finger: the card waits until it has moved 8px, so the wobble in a tap never nudges it, then lifts and follows
+        if (g.touch && !g.moved && far < 8) return;
         if (far > 4) g.moved = true;
+        if (g.touch && !g.lifted) { g.lifted = true; pile._lock = true; el.classList.add('lift'); lift(el, 1.06); }
         place(el, ox + dx, oy + dy); el.style.rotate = `${Math.max(-10, Math.min(10, dx * .04))}deg`; };
-      const end = () => { clearTimeout(g.ht); if (g.held || g.pinch) pile._lock = false; if (g.held) { el.classList.remove('lift'); lift(el, 1); } // put down
+      const end = () => { if (g.lifted || g.pinch) pile._lock = false; if (g.lifted) { el.classList.remove('lift'); lift(el, 1); } // put down
         el.style.transition = ''; // hand transitions back to the stylesheet (the drag set its own)
         el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', up);
         el.classList.remove('drag', 'pinch'); el._g = null; pane.dragging = false; pane.heldUntil = performance.now() + 1100; };
@@ -406,12 +411,7 @@
       const ct = Math.min(...rs.map(q => q.top)), b = Math.max(...rs.map(q => q.bottom)), rt = Math.min(svg.getBoundingClientRect().top, ct);
       const t = b - rt + 32 < innerHeight ? rt : ct;
       scrollBy({ top: b - t + 24 < innerHeight ? (t + b) / 2 - innerHeight / 2 : t - 12, behavior: 'smooth' }); };
-    // with no hover to show what the ruler does, a touchscreen opens the newest piece the first time the ruler comes into view
-    if (matchMedia('(hover: none)').matches && 'IntersectionObserver' in window) {
-      const io = new IntersectionObserver(es => { if (!es.some(x => x.isIntersecting)) return; io.disconnect(); if (cur || open) return;
-        const p = POSTS[POSTS.length - 1]; active = p; show(p, 0); open = true; }, { threshold: .9 });
-      io.observe(svg);
-    }
+    // nothing opens by itself, on a touchscreen either: the page starts with just the ruler, and a tap on it opens a piece
     // a click off the pile (anywhere that isn't a card, its open-card or the ruler) fades it away and returns to the
     // page as it first loaded: no pile, no piece picked
     const offTap = (e, finger) => {
@@ -454,7 +454,10 @@
       const w = bx.w * sc * z / 2, hh = bx.h * sc * z / 2, rad = bx.rad * sc * z, inset = Math.min(4, rad * (1 - Math.SQRT1_2) * .45); // just inside the corner: under half the way to the arc, and never more than 4px in however big the card is
       const deg = (parseFloat(o.style.getPropertyValue('--r')) || 0) + (parseFloat(o.style.rotate) || 0), a = deg * Math.PI / 180, c = Math.cos(a), sn = Math.sin(a);
       const pt = (lx, ly) => { lx += bx.dx * sc; ly += bx.dy * sc; return [cx + c * lx - sn * ly, cy + sn * lx + c * ly]; };
-      return { deg, cx, cy, corners: [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([sx, sy]) => ({ sx, sy, p: pt(sx * (w - inset), sy * (hh - inset)), probe: pt(sx * (w - inset - 7), sy * (hh - inset - 7)) })) }; };
+      // how far a corner's zone reaches: NEAR, but never more than halfway to the centre, so the middle of a small card (a
+      // logo sticker is 48px) is left for dragging it instead of every corner lighting up at once
+      const reach = Math.max(12, Math.min(NEAR, Math.hypot(w, hh) / 2));
+      return { deg, cx, cy, reach, corners: [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([sx, sy]) => ({ sx, sy, p: pt(sx * (w - inset), sy * (hh - inset)), probe: pt(sx * (w - inset - 7), sy * (hh - inset - 7)) })) }; };
     const visibleAt = (o, [x, y]) => { for (const e of document.elementsFromPoint(x, y)) { if (hd.contains(e)) continue; return e.closest('.pi') === o; } return false; };
     // every visible corner within NEAR of the pointer is live at once, each at its own strength (closer = stronger),
     // whatever the pointer happens to be over. Each live corner gets its own handle and edge gradient; a card's
@@ -505,15 +508,15 @@
       if (resizing) return; if (e.pointerType !== 'mouse' || Site.touchy() || (coarse && !e.movementX && !e.movementY)) return hideHd(); if (!cur || cur.dragging || S.o < .6 || !cur.isConnected || cur.classList.contains('focus')) return hideHd();
       const list = [];
       for (const o of cur.querySelectorAll('.pile .pi:not(.filo)')) { const g = geom(o); for (const cn of g.corners) { const d = Math.hypot(e.clientX - cn.p[0], e.clientY - cn.p[1]);
-        if (d < NEAR && visibleAt(o, cn.probe)) list.push({ key: keyOf(o, cn), o, g, cn, deg: g.deg, k: Math.max(0, Math.min(1, 1 - (d - 6) / (NEAR - 6))) }); } }
+        if (d < g.reach && visibleAt(o, cn.probe)) list.push({ key: keyOf(o, cn), o, g, cn, deg: g.deg, k: Math.max(0, Math.min(1, 1 - (d - 6) / (g.reach - 6))) }); } }
       setTargets(list);
     });
-    // pressing resizes the strongest live corner, unless you're over a different card and not right on the corner
-    // (then the press drags that card as usual)
+    // pressing resizes the strongest live corner, unless you're over a different card and not right on the corner (within
+    // about 10px of it): then the press drags the card you're over, a sticker sitting near another card's corner included
     document.addEventListener('pointerdown', e => {
       if (!hot || resizing || e.pointerType !== 'mouse' || Site.touchy()) return;
       let under = null; for (const el of document.elementsFromPoint(e.clientX, e.clientY)) { if (hd.contains(el)) continue; under = el.closest('.pi'); break; }
-      if (under && under !== hot.o && hot.k < .7) return;
+      if (under && under !== hot.o && hot.k < .9) return;
       e.preventDefault(); e.stopPropagation(); const { o, g, cn } = hot; resizing = true; frozen = true; hd.classList.add('grab'); paint([{ ...hot, k: 1 }]);
       // while you hold, the whole outline turns purple: a purple ring fades in over the card's shape and its black
       // outline fades out; on release they swap back, both ways eased

@@ -121,6 +121,7 @@
     else if (it.doc) inner = `<span class="pi-doc-bar"><i></i><i></i><i></i></span><span class="pi-doc-t">${esc(it.doc)}</span><span class="pi-doc-img"></span><span class="pi-doc-l" style="width:88%"></span><span class="pi-doc-l" style="width:70%"></span><span class="pi-doc-l" style="width:80%"></span>`;
     else if (it.html) inner = it.html; // add-on piles (playlists.js) bring their own card markup
     else if (it.job) inner = `<span class="pi-job-k">Job ad</span><span class="pi-job-t">${esc(it.job)}</span><span class="pi-job-h">The role</span><span class="pi-doc-l" style="width:92%"></span><span class="pi-doc-l" style="width:70%"></span><span class="pi-job-h">About you</span><span class="pi-doc-l" style="width:84%"></span><span class="pi-doc-l" style="width:58%"></span><span class="pi-job-apply">Apply →</span>`;
+    if (it.back) inner += it.back; // a sleeve that shows on click (playlists.js: the desk photo and clip carry 1 for Tom's Spotify profile)
     const kind = it.html ? it.cls : it.sticker ? 'sticker' : it.doc ? 'doc' : it.job ? 'job' : it.video ? 'media vid' : 'media';
     return `<div class="pi ${kind}"${it.id ? ` data-id="${it.id}"` : ''}${it.href ? ` data-href="${it.href}"` : ''} ${it.under ? ' data-min=".6"' : ''} style="--x:${x}px;--y:${y}px;--r:${r}deg"${extra}>${inner}</div>`;
   }
@@ -441,8 +442,9 @@
     const hd = h('<div class="rc-hd"></div>'); document.body.append(hd);
     let hot = null, resizing = false, resizedAt = 0;
     const NEAR = 48, EDGE = 130;
-    // the visible shape: a sticker's tile; a playlist cover's sleeve while it is showing
-    const sleeve = o => o.classList.contains('cover') && o.classList.contains('flip') ? o.querySelector('.pl-back') : null;
+    // the visible shape: a sticker's tile; a sleeve while it is showing (a playlist cover's, or the profile one on the
+    // desk photo and clip)
+    const sleeve = o => o.classList.contains('flip') ? o.querySelector('.pl-back') : null;
     const shapeOf = o => sleeve(o) || o.querySelector('.pi-tile') || o;
     const boxOf = o => { const sl = sleeve(o);
       if (sl) { // its size from layout (inside the 60% zoom); its offset from the card's centre measured live and un-rotated

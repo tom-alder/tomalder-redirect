@@ -4,6 +4,7 @@
 // (embeds/footer-easter-egg-spotify.html).
 //   click a cover: its sleeve slides up from behind it (a covered one swings out and lands on top first)
 //   click the sleeve: opens the playlist on Spotify
+//   click the desk photo or its clip: the same sleeve comes up, for Tom's Spotify profile, and opens that
 //   drag, resize and stack the covers and Filo exactly like any other card
 (function () {
   const PL = [
@@ -40,6 +41,12 @@
     <svg class="pl-note pl-note-c" viewBox="0 0 32 44" width="32" height="42"><path d="M24 3 V30 M24 3 C30 4 33 12 32 18 M24 14 C30 16 33 22 32 28" stroke="currentColor" stroke-width="3.2" fill="none" stroke-linecap="round"/><ellipse cx="16" cy="34" rx="8" ry="6" fill="currentColor" transform="rotate(-22 16 34)"/></svg>
   </span></div>`;
   const barcode = () => { const pool = [1, 1, 1, 1.5, 1.5, 2, 2, 2.5, 2.5, 3, 3, 3.5, 4, 4.5, 5]; let s = ''; for (let k = 0; k < 20; k++) s += `<i style="width:${pool[Math.floor(Math.random() * pool.length)]}px"></i>`; return s; };
+  // the desk photo and its clip carry a sleeve too: a cover's sleeve, same size and parts, for Tom's Spotify profile.
+  // "Tom Alder" is the name his profile shows (it's the owner name on his playlists); its saves are all 6 playlists'
+  const SAVES = PL.reduce((s, p) => s + p.saves, 0);
+  const profileSleeve = () => `<span class="pl-sl"><span class="cv"><span class="pl-back" data-href="${PROFILE}" data-kicker="Open on Spotify" role="link"><span class="pl-play" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z"/></svg></span><span class="pl-head"><span class="pl-side">Profile</span><span class="pl-title">Tom Alder</span></span>
+        <span class="pl-desc">My work setup. 🎧\n\nHit play for my Spotify profile, and follow along there.</span>
+        <span class="pl-foot"><span class="pl-barcode">${barcode()}</span><span class="pl-live">${SPOTIFY}<span>${SAVES} saves</span></span></span></span></span></span>`;
 
   // the playlists as a pile on the site's own pile engine (timelines.js), so they deal, drag, resize and stack exactly
   // like the cards for every other piece. Filo is one more card in the pile.
@@ -47,7 +54,8 @@
   // the green play cursor comes up with a sleeve when you click a cover (never from hovering), and stays while you
   // stay on or near the pile; moving well off to the side puts everything back to normal
   let live = null; // { card, n }
-  const sleeveLabel = card => { const t = card.querySelector('.pl-title'); return `<em>Play on Spotify</em><span>${t ? t.textContent : ''}</span>`; };
+  // (the profile sleeve's label says "Open on Spotify": a profile has nothing to play)
+  const sleeveLabel = card => { const t = card.querySelector('.pl-title'), b = card.querySelector('.pl-back'); return `<em>${(b && b.dataset.kicker) || 'Play on Spotify'}</em><span>${t ? t.textContent : ''}</span>`; };
   // with a sleeve up, the rest of the pile fades like any pile does under the cursor: a veil the page's own colour sits
   // just beneath the open cover, so everything behind it reads as 1 faded group while the sleeve stays crisp
   const veilOn = (card, n) => { const pile = n.querySelector('.pile'); let v = pile.querySelector('.pl-veil');
@@ -70,6 +78,13 @@
   // a tap on the pinned disc where there's no card under it still plays the sleeve
   document.addEventListener('click', e => { if (!live || !live.card.isConnected || !Site.gc || !Site.gc.hit || !Site.gc.hit(e.clientX, e.clientY)) return; if (e.target.closest && e.target.closest('.pi')) return;
     const b = live.card.querySelector('.pl-back'); if (b && b.dataset.href) { e.preventDefault(); e.stopPropagation(); window.open(b.dataset.href, '_blank', 'noopener'); endSleeve(); } }, true); // and the pile stays
+  // a sleeve wider than its card (the desk clip's) can reach past the side of a phone's screen: the card then slides in
+  // just far enough for the whole sleeve to show, and stays there
+  const keepOn = (card, n) => { const b = card.querySelector('.pl-back'); if (!b) return; const r = b.getBoundingClientRect(), m = 8;
+    const dx = r.left < m ? m - r.left : r.right > innerWidth - m ? innerWidth - m - r.right : 0; if (Math.abs(dx) < 1) return;
+    const z = n._z || 1, x0 = card._x || 0, y = card._y || 0, x = x0 + dx / z; // the pile may be shrunk to fit the screen
+    card.animate([{ translate: `${x0}px ${y}px` }, { translate: `${x}px ${y}px` }], { duration: 300, easing: 'cubic-bezier(.22, .9, .35, 1)' });
+    card.style.translate = `${x}px ${y}px`; card._x = x; };
   const startSleeve = (card, n) => { live = { card, n }; veilOn(card, n); if (!Site.gc) return; Site.gc.show('sleeve', 'spotify', sleeveLabel(card));
     if (Site.touchy && Site.touchy()) setTimeout(() => { if (!live || live.card !== card) return; const q = pinSpot(card); if (q) Site.gc.pin(q[0], q[1]); }, 300); }; // kept on screen
   function post() {
@@ -80,31 +95,30 @@
     return { custom: 'pl', title: 'Playlists', date: '2026-11-15', url: PROFILE,
       // Filo is dealt onto the left half of the pile, so the notes floating up and right from his headphones always
       // land over the covers, never out over the page
-      // plus the desk the playlists play at: a photo and a short clip
+      // plus the desk the playlists play at: a photo and a short clip, each with the profile sleeve
       // 1 pile: Filo sits on its left side (top, middle or bottom left, picked per visit), and the vertical desk clip
       // sits on the right side, always 2nd from the top, so most of it shows
-      pile: covers.concat([{ img: 'assets/pl-desk.jpg' }, { video: 'assets/pl-desk.mp4', under: true, pos: rnd => [112 + rnd() * 18, (rnd() * 2 - 1) * 22, (rnd() < .5 ? -1 : 1) * (1.5 + rnd() * 3.5)] }], [{ cls: 'filo', html: FILO,
+      pile: covers.concat([{ img: 'assets/pl-desk.jpg', back: profileSleeve() }, { video: 'assets/pl-desk.mp4', back: profileSleeve(), under: true, pos: rnd => [112 + rnd() * 18, (rnd() * 2 - 1) * 22, (rnd() < .5 ? -1 : 1) * (1.5 + rnd() * 3.5)] }], [{ cls: 'filo', html: FILO,
         pos: rnd => { const y = [-70, 0, 70][Math.floor(rnd() * 3)]; return [-128 + rnd() * 16, y + (rnd() * 2 - 1) * 10, (rnd() < .5 ? -1 : 1) * (1 + rnd() * 4)]; } }]),
-      // a click shows that cover's sleeve, the way a click on any other card brings up its "open" card. The sleeve
-      // links to the playlist. A covered cover first swings out and lands on top so its sleeve can be seen.
+      // a click shows that card's sleeve, the way a click on any other card brings up its "open" card. A cover's sleeve
+      // links to its playlist; the desk photo's and clip's to Tom's profile. A covered card first swings out and lands
+      // on top so its sleeve can be seen.
       onArm: (card, n) => {
-        // a click on the sleeve (or a link in its copy) opens it; it never flips the cover shut
+        // a click on the sleeve (or a link in its copy) opens it; it never flips the card shut
         // (a tap on the green disc counts as a tap on its sleeve: the disc lets taps through to whatever is under it)
         const onDisc = live && Site.gc && Site.gc.hit && Site.gc.hit(downXY[0], downXY[1]) ? live.card.querySelector('.pl-back') : null;
-        const hit = onDisc || (lastDown && lastDown.closest && (lastDown.closest('.pl-sub') || lastDown.closest('.pi.cover.flip .pl-back')));
+        const hit = onDisc || (lastDown && lastDown.closest && (lastDown.closest('.pl-sub') || lastDown.closest('.pi.flip .pl-back')));
         if (hit) { window.open(hit.dataset.href, '_blank', 'noopener'); endSleeve(); return; }
-        const all = [...n.querySelectorAll('.pi.cover')];
-        // the desk photo and its clip open Tom's Spotify profile
-        if (card && card.classList.contains('media')) { endSleeve(); all.forEach(c => c.classList.remove('flip')); window.open(PROFILE, '_blank', 'noopener'); return; }
-        if (!card || !card.classList.contains('cover')) { endSleeve(); all.forEach(c => c.classList.remove('flip')); return; }
+        const all = [...n.querySelectorAll('.pile .pi')].filter(c => c.querySelector('.pl-back')); // every card with a sleeve (Filo has none)
+        if (!card || !card.querySelector('.pl-back')) { endSleeve(); all.forEach(c => c.classList.remove('flip')); return; }
         if (card.classList.contains('flip')) { endSleeve(); return; }
         endSleeve(); all.forEach(c => c.classList.remove('flip'));
         const r = card.getBoundingClientRect(), covered = [...n.querySelectorAll('.pile .pi')].some(o => o !== card && +o.style.zIndex > +card.style.zIndex && (() => { const q = o.getBoundingClientRect(); return q.left < r.right && q.right > r.left && q.top < r.bottom && q.bottom > r.top; })());
         const raise = () => n._raise ? n._raise(card) : null; // to the true top of the stack, in front of Filo too
-        if (!covered) { raise(); card.classList.add('flip'); startSleeve(card, n); return; }
+        if (!covered) { raise(); card.classList.add('flip'); keepOn(card, n); startSleeve(card, n); return; }
         const side = (parseFloat(card.style.getPropertyValue('--x')) || 1) < 0 ? -1 : 1, x = card._x || 0, y = card._y || 0;
         card.animate([{ translate: `${x}px ${y}px` }, { translate: `${x + side * 200}px ${y - 10}px`, offset: .45 }, { translate: `${x}px ${y}px` }], { duration: 720, easing: 'cubic-bezier(.33, .8, .25, 1)' });
-        setTimeout(raise, 320); setTimeout(() => { card.classList.add('flip'); startSleeve(card, n); }, 740);
+        setTimeout(raise, 320); setTimeout(() => { card.classList.add('flip'); keepOn(card, n); startSleeve(card, n); }, 740);
       } };
   }
 
